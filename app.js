@@ -58,11 +58,6 @@
   const sideUi = {
     longBtn: document.getElementById("btnSideLong"),
     shortBtn: document.getElementById("btnSideShort"),
-    modal: document.getElementById("sideModal"),
-    modalLong: document.getElementById("modalSideLong"),
-    modalShort: document.getElementById("modalSideShort"),
-    modalEntry5: document.getElementById("modalEntry5"),
-    modalEntryErr: document.getElementById("modalEntryError"),
   };
 
   let lastPresetPhrase = "";
@@ -75,6 +70,14 @@
     showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1000);
   }
   showToast._t = null;
+
+  function showToastFor(message, ms) {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove("show"), ms);
+  }
 
   async function copyTextWithSelection(text) {
     const t = String(text || "");
@@ -106,6 +109,48 @@
     } finally {
       document.body.removeChild(ta);
     }
+  }
+
+  function selectElementText(el) {
+    if (!el) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  async function copyCaptionText(el) {
+    const text = String(el?.textContent || "");
+    if (!text.trim()) return false;
+    selectElementText(el); // 파란색 선택 상태 유지
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        // fallthrough
+      }
+    }
+    try {
+      return !!(document.execCommand && document.execCommand("copy"));
+    } catch {
+      return false;
+    }
+  }
+
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const LS_SIDE_TS = "coinbreaker_side_ts";
+  const LS_ENTRY_TS = "coinbreaker_entry_ts";
+
+  function getTs(key) {
+    const v = Number(localStorage.getItem(key));
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  function setTs(key) {
+    localStorage.setItem(key, String(Date.now()));
   }
 
   function randFloat(min, max) {
@@ -738,74 +783,21 @@
     if (els.side) els.side.value = value;
     if (sideUi.longBtn) sideUi.longBtn.classList.toggle("active", value === "LONG");
     if (sideUi.shortBtn) sideUi.shortBtn.classList.toggle("active", value === "SHORT");
-    if (closeModal && sideUi.modal) sideUi.modal.classList.add("hidden");
-    renderAll();
-  }
-
-  function showModalStep(stepName) {
-    if (!sideUi.modal) return;
-    sideUi.modal.classList.remove("hidden");
-    sideUi.modal.querySelectorAll(".modal-step").forEach((el) => {
-      el.classList.toggle("active", el.getAttribute("data-step") === stepName);
-    });
-    if (stepName === "entry") {
-      if (sideUi.modalEntryErr) sideUi.modalEntryErr.textContent = "";
-      if (sideUi.modalEntry5) {
-        // 항상 0. + 5자리 입력만 받기
-        sideUi.modalEntry5.value = "";
-        setTimeout(() => sideUi.modalEntry5?.focus(), 0);
-      }
-    }
-  }
-
-  function isValidEntry5(s) {
-    return /^\d{5}$/.test(String(s || ""));
-  }
-
-  function applyEntryFromModal(entry5) {
-    const v = `0.${entry5}`;
-    if (els.entry) els.entry.value = v;
-    // 진입가 기반 랜덤(실제진입가)도 새 기준으로 다시 계산되게
-    sampleEntry = null;
-    lastEntryBase = null;
     renderAll();
   }
 
   function bindSideUi() {
     // 메인 버튼
-    if (sideUi.longBtn) sideUi.longBtn.addEventListener("click", () => setSide("LONG", { closeModal: false }));
-    if (sideUi.shortBtn) sideUi.shortBtn.addEventListener("click", () => setSide("SHORT", { closeModal: false }));
-
-    // 모달 버튼(최초 진입 강제) → 다음 단계(기준진입가)로 이동
-    if (sideUi.modalLong)
-      sideUi.modalLong.addEventListener("click", () => {
+    if (sideUi.longBtn)
+      sideUi.longBtn.addEventListener("click", () => {
         setSide("LONG", { closeModal: false });
-        showModalStep("entry");
+        setTs(LS_SIDE_TS);
       });
-    if (sideUi.modalShort)
-      sideUi.modalShort.addEventListener("click", () => {
+    if (sideUi.shortBtn)
+      sideUi.shortBtn.addEventListener("click", () => {
         setSide("SHORT", { closeModal: false });
-        showModalStep("entry");
+        setTs(LS_SIDE_TS);
       });
-
-    // 기준진입가 입력(Enter로 확정)
-    if (sideUi.modalEntry5) {
-      sideUi.modalEntry5.addEventListener("input", () => {
-        // 숫자만 허용
-        sideUi.modalEntry5.value = sideUi.modalEntry5.value.replace(/[^\d]/g, "").slice(0, 5);
-      });
-      sideUi.modalEntry5.addEventListener("keydown", (ev) => {
-        if (ev.key !== "Enter") return;
-        ev.preventDefault();
-        const v = sideUi.modalEntry5.value;
-        if (!isValidEntry5(v)) {
-          if (sideUi.modalEntryErr) sideUi.modalEntryErr.textContent = "5자리 숫자를 입력하세요.";
-          return;
-        }
-        applyEntryFromModal(v);
-        if (sideUi.modal) sideUi.modal.classList.add("hidden");
-      });
-    }
   }
 
 
@@ -988,6 +980,13 @@
       }
     });
 
+    // 기준진입가를 수정하면 "최근 1시간 내 확인"으로 간주
+    if (els.entry) {
+      const mark = () => setTs(LS_ENTRY_TS);
+      els.entry.addEventListener("input", mark);
+      els.entry.addEventListener("change", mark);
+    }
+
     const doGenerate = () => {
       const n = getCount();
       const baseEntry = (els.entry?.value || "").trim();
@@ -1002,6 +1001,7 @@
     if (els.generate) els.generate.addEventListener("click", doGenerate);
 
     // 프리셋: 수익금(만원) 범위만 변경 → 생성 → 문구 표시 → 자동 클립보드 복사 + 미리보기
+    let firstPresetHintShown = false;
     document.querySelectorAll(".preset-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const pmin = btn.getAttribute("data-pmin");
@@ -1024,6 +1024,23 @@
         const caption = presetId ? document.querySelector(`.preset-caption[data-preset="${presetId}"]`) : null;
         if (caption) caption.textContent = phrase;
 
+        // 1) 프리셋 첫 클릭 시 2초 팝업
+        if (!firstPresetHintShown) {
+          firstPresetHintShown = true;
+          showToastFor("프리셋 적용됨", 2000);
+        }
+
+        // 2) 롱/숏 또는 진입가를 최근 1시간 내에 확인/수정 안 했다면 2초 팝업
+        const now = Date.now();
+        const sideSelected = ["LONG", "SHORT"].includes(String(els.side?.value || "").toUpperCase());
+        const sideTs = getTs(LS_SIDE_TS);
+        const entryTs = getTs(LS_ENTRY_TS);
+        const sideOk = sideSelected && now - sideTs < ONE_HOUR_MS;
+        const entryOk = entryTs > 0 && now - entryTs < ONE_HOUR_MS;
+        if (!sideOk || !entryOk) {
+          showToastFor("롱/숏·진입가 확인하세요", 2000);
+        }
+
         try {
           await copyCanvasToClipboardAndPreview();
           showToast("클립보드에 복사됨");
@@ -1034,15 +1051,11 @@
       });
     });
 
-    // 프리셋 아래 문구 클릭 시: 한 번 클릭으로 전체 복사
+    // 프리셋 아래 문구 클릭 시: 드래그(선택)된 상태로 만들고, 클립보드에도 복사
     document.querySelectorAll(".preset-caption").forEach((cap) => {
       cap.addEventListener("click", async () => {
-        const text = cap.textContent || "";
-        const ok = await copyTextWithSelection(text);
-        if (!ok) return;
-        cap.classList.add("copied");
-        setTimeout(() => cap.classList.remove("copied"), 600);
-        showToast("문구 복사됨");
+        const ok = await copyCaptionText(cap);
+        if (ok) showToast("문구 복사됨");
       });
     });
     if (els.downloadZip) els.downloadZip.addEventListener("click", downloadZip);

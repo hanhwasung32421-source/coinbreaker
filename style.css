@@ -133,13 +133,8 @@ canvas{
   align-items:center;
   justify-content:center;
   text-align:center;
-  cursor: pointer;
-  user-select: none;
-}
-
-.preset-caption.copied{
-  outline: 2px solid rgba(10,191,127,.55);
-  background: rgba(10,191,127,.12);
+  cursor: text;
+  user-select: text;
 }
 
 .toast{

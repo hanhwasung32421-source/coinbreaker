@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./style.css?v=17" />
+    <link rel="stylesheet" href="./style.css?v=18" />
   </head>
   <body>
     <div class="app">
@@ -424,38 +424,7 @@
 
     <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
 
-    <!-- 최초 진입 시 LONG/SHORT → 기준진입가(필수) 강제 입력 -->
-    <div id="sideModal" class="modal-overlay" aria-modal="true" role="dialog" aria-label="초기 설정">
-      <div class="modal">
-        <div class="modal-step active" data-step="side">
-          <div class="modal-title">포지션을 선택하세요</div>
-          <div class="modal-actions">
-            <button id="modalSideLong" class="primary modal-btn" type="button">LONG</button>
-            <button id="modalSideShort" class="danger modal-btn" type="button">SHORT</button>
-          </div>
-        </div>
-
-        <div class="modal-step" data-step="entry">
-          <div class="modal-title">기준진입가를 입력하세요</div>
-          <div class="modal-sub">0. 뒤 5자리만 입력 후 Enter</div>
-          <div class="entry-row">
-            <span class="entry-prefix">0.</span>
-            <input
-              id="modalEntry5"
-              class="entry-suffix"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              maxlength="5"
-              placeholder="11445"
-            />
-          </div>
-          <div id="modalEntryError" class="modal-error"></div>
-        </div>
-      </div>
-    </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="./app.js?v=37"></script>
+    <script src="./app.js?v=38"></script>
   </body>
 </html>
