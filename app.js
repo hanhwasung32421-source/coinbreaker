@@ -121,25 +121,6 @@
     sel.addRange(range);
   }
 
-  async function copyCaptionText(el) {
-    const text = String(el?.textContent || "");
-    if (!text.trim()) return false;
-    selectElementText(el); // 파란색 선택 상태 유지
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch {
-        // fallthrough
-      }
-    }
-    try {
-      return !!(document.execCommand && document.execCommand("copy"));
-    } catch {
-      return false;
-    }
-  }
-
   const ONE_HOUR_MS = 60 * 60 * 1000;
   const LS_SIDE_TS = "coinbreaker_side_ts";
   const LS_ENTRY_TS = "coinbreaker_entry_ts";
@@ -1051,11 +1032,10 @@
       });
     });
 
-    // 프리셋 아래 문구 클릭 시: 드래그(선택)된 상태로 만들고, 클립보드에도 복사
+    // 프리셋 아래 문구 클릭 시: 드래그(선택)된 상태로만 만들기(복사는 하지 않음)
     document.querySelectorAll(".preset-caption").forEach((cap) => {
-      cap.addEventListener("click", async () => {
-        const ok = await copyCaptionText(cap);
-        if (ok) showToast("문구 복사됨");
+      cap.addEventListener("click", () => {
+        selectElementText(cap);
       });
     });
     if (els.downloadZip) els.downloadZip.addEventListener("click", downloadZip);
