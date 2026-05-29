@@ -1085,12 +1085,19 @@
       maxY = Math.max(maxY, b.y + b.h);
     });
 
+    // 글자 외곽(특히 왼쪽 첫 글자) 절대 안 잘리게: 추가 안전 여백
+    // (hitbox가 글리프의 왼쪽/오버행을 100% 포함 못하는 경우가 있어 고정 여유를 더함)
+    const SAFE_L = 26;
+    const SAFE_R = 18;
+    const SAFE_T = 16;
+    const SAFE_B = 16;
+
     const clamp = (v, a, b) => Math.max(a, Math.min(v, b));
     // 필수 포함 영역(텍스트 포함)도 배경 영역 안으로만 클램프
-    const reqX = clamp(Math.floor(minX - padL), L, R);
-    const reqY = clamp(Math.floor(minY - padT), T, B);
-    const reqMaxX = clamp(Math.ceil(maxX + padR), L, R);
-    const reqMaxY = clamp(Math.ceil(maxY + padB), T, B);
+    const reqX = clamp(Math.floor(minX - padL - SAFE_L), L, R);
+    const reqY = clamp(Math.floor(minY - padT - SAFE_T), T, B);
+    const reqMaxX = clamp(Math.ceil(maxX + padR + SAFE_R), L, R);
+    const reqMaxY = clamp(Math.ceil(maxY + padB + SAFE_B), T, B);
     const reqW = Math.max(1, reqMaxX - reqX);
     const reqH = Math.max(1, reqMaxY - reqY);
 
