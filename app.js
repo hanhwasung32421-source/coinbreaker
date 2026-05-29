@@ -988,18 +988,57 @@
       });
   }
 
+  function getBgRectOnCanvas() {
+    const W = CANVAS_W;
+    const H = CANVAS_H;
+    const iw = bgImg.naturalWidth || bgImg.width;
+    const ih = bgImg.naturalHeight || bgImg.height;
+    if (!iw || !ih) return { x: 0, y: 0, w: W, h: H };
+
+    const zoom = getBgZoom();
+    const baseScale = Math.max(W / iw, H / ih);
+    const scale = baseScale * zoom;
+
+    // zoom >= 1: 배경은 항상 캔버스를 꽉 채움
+    if (zoom >= 1) return { x: 0, y: 0, w: W, h: H };
+
+    // zoom < 1: 배경이 캔버스보다 작아질 수 있으므로, 실제 배경이 그려진 영역만 반환(검정 영역 제외)
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx0 = (W - dw) / 2;
+    const dy0 = (H - dh) / 2;
+    const dx = dx0 + getBgShiftX();
+    const dy = dy0 + getBgShiftY();
+
+    const x1 = Math.max(0, Math.floor(dx));
+    const y1 = Math.max(0, Math.floor(dy));
+    const x2 = Math.min(W, Math.ceil(dx + dw));
+    const y2 = Math.min(H, Math.ceil(dy + dh));
+    const w = Math.max(0, x2 - x1);
+    const h = Math.max(0, y2 - y1);
+
+    // 너무 작아져서 유효 영역이 없으면(극단값) 안전하게 전체로
+    if (w < 2 || h < 2) return { x: 0, y: 0, w: W, h: H };
+    return { x: x1, y: y1, w, h };
+  }
+
 
   function computeCropRect() {
     const W = CANVAS_W;
+    const bgRect = getBgRectOnCanvas();
+    const L = bgRect.x;
+    const T = bgRect.y;
+    const R = bgRect.x + bgRect.w;
+    const B = bgRect.y + bgRect.h;
     const H = CANVAS_H;
 
     // 15%: 세로 전체 글씨 포함 / 15%: 거의 전체 이미지 / 70%: 수익률+수익금 포함 랜덤
     const mode = Math.random();
 
     // (2) 15% - 전체 이미지
-    if (mode >= 0.15 && mode < 0.30) {
+      // 전체 화면 크롭이어도 "배경이 그려진 영역까지만"(검정 빈 영역 제외)
+      return { x: L, y: T, w: bgRect.w, h: bgRect.h };
       return { x: 0, y: 0, w: W, h: H };
-    }
 
     // 글씨가 절대 안 짤리도록 여유(패딩) 넉넉하게
     const padL = randInt(24, 48);
@@ -1015,7 +1054,7 @@
       boxes = lastHitboxes.filter((b) => wanted.includes(b.id));
     }
     if (boxes.length === 0) boxes = lastHitboxes.slice();
-    if (boxes.length === 0) return { x: 0, y: 0, w: W, h: H };
+    if (boxes.length === 0) return { x: L, y: T, w: bgRect.w, h: bgRect.h };
 
     let minX = Infinity,
       minY = Infinity,
@@ -1028,22 +1067,23 @@
       maxY = Math.max(maxY, b.y + b.h);
     });
 
-    const reqX = Math.max(0, Math.floor(minX - padL));
-    const reqY = Math.max(0, Math.floor(minY - padT));
-    const reqMaxX = Math.min(W, Math.ceil(maxX + padR));
-    const reqMaxY = Math.min(H, Math.ceil(maxY + padB));
+    const clamp = (v, a, b) => Math.max(a, Math.min(v, b));
+    const reqX = clamp(Math.floor(minX - padL), L, R);
+    const reqY = clamp(Math.floor(minY - padT), T, B);
+    const reqMaxX = clamp(Math.ceil(maxX + padR), L, R);
+    const reqMaxY = clamp(Math.ceil(maxY + padB), T, B);
     const reqW = Math.max(1, reqMaxX - reqX);
     const reqH = Math.max(1, reqMaxY - reqY);
 
     const extraW = mode < 0.15 ? randInt(80, 260) : randInt(40, 220);
     const extraH = mode < 0.15 ? randInt(60, 160) : randInt(20, 120);
-    const w = Math.min(W, randInt(reqW, Math.min(W, reqW + extraW)));
-    const h = Math.min(H, randInt(reqH, Math.min(H, reqH + extraH)));
+    const w = Math.min(bgRect.w, randInt(reqW, Math.min(bgRect.w, reqW + extraW)));
+    const h = Math.min(bgRect.h, randInt(reqH, Math.min(bgRect.h, reqH + extraH)));
 
-    const xMin = Math.max(0, reqMaxX - w);
-    const xMax = Math.min(W - w, reqX);
-    const yMin = Math.max(0, reqMaxY - h);
-    const yMax = Math.min(H - h, reqY);
+    const xMin = Math.max(L, reqMaxX - w);
+    const xMax = Math.min(R - w, reqX);
+    const yMin = Math.max(T, reqMaxY - h);
+    const yMax = Math.min(B - h, reqY);
 
     const x = randInt(xMin, xMax);
     const y = randInt(yMin, yMax);
