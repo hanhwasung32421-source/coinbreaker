@@ -716,10 +716,11 @@
 
     // zoom < 1: 이미지가 캔버스보다 작아질 수 있으므로 "캔버스 위에서 이미지 자체를 이동" 방식으로 처리
     // (이때 네비게이터는 dest 좌표를 움직여서 항상 동작하게 함)
-    const dw = iw * scale;
-    const dh = ih * scale;
-    const dx0 = (CANVAS_W - dw) / 2;
-    const dy0 = (CANVAS_H - dh) / 2;
+    // 서브픽셀(소수점)로 그리면 가장자리 1px 투명/흰줄이 생길 수 있어서 정수 픽셀로 스냅
+    const dw = Math.max(1, Math.round(iw * scale));
+    const dh = Math.max(1, Math.round(ih * scale));
+    const dx0 = Math.round((CANVAS_W - dw) / 2);
+    const dy0 = Math.round((CANVAS_H - dh) / 2);
 
     const dx = dx0 + getBgShiftX();
     const dy = dy0 + getBgShiftY();
@@ -1010,17 +1011,18 @@
     if (zoom >= 1) return { x: 0, y: 0, w: W, h: H };
 
     // zoom < 1: 배경이 캔버스보다 작아질 수 있으므로, 실제 배경이 그려진 영역만 반환(검정 영역 제외)
-    const dw = iw * scale;
-    const dh = ih * scale;
-    const dx0 = (W - dw) / 2;
-    const dy0 = (H - dh) / 2;
+    // drawBackgroundCoverTo()와 동일한 정수 스냅 로직을 사용해 "투명 1px"이 포함되지 않게 함
+    const dw = Math.max(1, Math.round(iw * scale));
+    const dh = Math.max(1, Math.round(ih * scale));
+    const dx0 = Math.round((W - dw) / 2);
+    const dy0 = Math.round((H - dh) / 2);
     const dx = dx0 + getBgShiftX();
     const dy = dy0 + getBgShiftY();
 
-    const x1 = Math.max(0, Math.floor(dx));
-    const y1 = Math.max(0, Math.floor(dy));
-    const x2 = Math.min(W, Math.ceil(dx + dw));
-    const y2 = Math.min(H, Math.ceil(dy + dh));
+    const x1 = Math.max(0, dx);
+    const y1 = Math.max(0, dy);
+    const x2 = Math.min(W, dx + dw);
+    const y2 = Math.min(H, dy + dh);
     const w = Math.max(0, x2 - x1);
     const h = Math.max(0, y2 - y1);
 
