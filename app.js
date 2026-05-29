@@ -1043,17 +1043,17 @@
 
     // (2) 15% - 거의 전체 이미지 (단, 항상 배경 영역 안에서만)
     if (mode >= 0.15 && mode < 0.30) {
-      const maxMx = Math.min(24, Math.floor(bgRect.w * 0.08));
+      // 가로는 60~100% 사이를 1% 단위로 랜덤 (왼쪽은 항상 배경의 왼쪽 끝)
+      const widthPct = randInt(60, 100) / 100;
+      const cropW = Math.max(1, Math.floor(bgRect.w * widthPct));
+
       const maxMy = Math.min(24, Math.floor(bgRect.h * 0.08));
-      // 왼쪽 글씨 절대 안 잘리게: 항상 배경의 왼쪽 끝부터 시작
-      const mxL = 0;
-      const mxR = randInt(0, Math.max(0, maxMx));
       const myT = randInt(0, Math.max(0, maxMy));
       const myB = randInt(0, Math.max(0, maxMy));
-      const x = L + mxL;
+      const x = L; // 왼쪽 고정
       const y = T + myT;
-      const w = Math.max(1, bgRect.w - mxL - mxR);
-      const h = Math.max(1, bgRect.h - myT - myB);
+      const w = cropW;
+      const h = Math.max(1, bgRect.h - myT - myB); // 세로는 길게 나올 수 있게(거의 전체)
       return { x, y, w, h };
     }
 
