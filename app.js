@@ -677,10 +677,10 @@
 
     // rows
     const rows = [
-      { key: "stock", label: "Stock", value: t.symbol, extra: t.side },
-      { key: "leverage", label: "Leverage", value: t.leverage },
-      { key: "entry", label: "Entry Price", value: t.entry },
-      { key: "exit", label: "Exit Price", value: t.exit },
+      { key: "stock", label: "코인", value: t.symbol, extra: t.side },
+      { key: "leverage", label: "레버리지", value: t.leverage },
+      { key: "entry", label: "진입가격", value: t.entry },
+      { key: "exit", label: "종료가격", value: t.exit },
     ];
 
     rows.forEach((row, idx) => {
