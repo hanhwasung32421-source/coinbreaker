@@ -1032,21 +1032,17 @@
 
 
   function computeCropRect() {
-    const W = CANVAS_W;
     const bgRect = getBgRectOnCanvas();
     const L = bgRect.x;
     const T = bgRect.y;
     const R = bgRect.x + bgRect.w;
     const B = bgRect.y + bgRect.h;
-    const H = CANVAS_H;
 
     // 15%: 세로 전체 글씨 포함 / 15%: 거의 전체 이미지 / 70%: 수익률+수익금 포함 랜덤
     const mode = Math.random();
 
-    // (2) 15% - 전체 이미지
-      // 전체 화면 크롭이어도 "배경이 그려진 영역까지만"(검정 빈 영역 제외)
-      // 전체 화면 크롭이어도 "배경이 그려진 영역까지만"(검정 빈 영역 제외)
-      // + 너무 딱 맞게만 나오지 않도록, 배경 영역 안에서 랜덤 마진을 줌
+    // (2) 15% - 거의 전체 이미지 (단, 항상 배경 영역 안에서만)
+    if (mode >= 0.15 && mode < 0.30) {
       const maxMx = Math.min(24, Math.floor(bgRect.w * 0.08));
       const maxMy = Math.min(24, Math.floor(bgRect.h * 0.08));
       const mxL = randInt(0, Math.max(0, maxMx));
@@ -1058,9 +1054,8 @@
       const w = Math.max(1, bgRect.w - mxL - mxR);
       const h = Math.max(1, bgRect.h - myT - myB);
       return { x, y, w, h };
+    }
 
-    // 글씨가 절대 안 짤리도록 여유(패딩) 넉넉하게
-    const padL = randInt(24, 48);
     // 배경이 축소된 상태(bgRect가 작을 때)에도 랜덤 크롭이 되도록 패딩을 bgRect 크기에 비례해 제한
     const padMaxX = Math.max(10, Math.floor(bgRect.w * 0.18));
     const padMaxY = Math.max(10, Math.floor(bgRect.h * 0.18));
@@ -1098,6 +1093,9 @@
     const reqMaxY = clamp(Math.ceil(maxY + padB), T, B);
     const reqW = Math.max(1, reqMaxX - reqX);
     const reqH = Math.max(1, reqMaxY - reqY);
+
+    // 배경 영역이 너무 작아서 텍스트 포함이 불가능하면 배경 영역 전체로
+    if (reqW >= bgRect.w || reqH >= bgRect.h) return { x: L, y: T, w: bgRect.w, h: bgRect.h };
 
     const extraW = mode < 0.15 ? randInt(80, 260) : randInt(40, 220);
     const extraH = mode < 0.15 ? randInt(60, 160) : randInt(20, 120);
