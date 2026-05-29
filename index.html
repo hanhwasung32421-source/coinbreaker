@@ -122,8 +122,8 @@
           </label>
 
           <label>
-            배경 확대/축소 (0.80~1.20 권장, 1.00=기본)
-            <input id="inpBgZoom" type="number" step="0.001" min="0.5" max="2" value="1.000" />
+            배경 확대/축소 (1.00~2.00, 1.00=기본)
+            <input id="inpBgZoom" type="number" step="0.001" min="1" max="2" value="1.000" />
             <div class="zoom-stepper">
               <button id="btnZoomOut" class="secondary" type="button">축소 -0.1%</button>
               <button id="btnZoomIn" class="secondary" type="button">확대 +0.1%</button>
@@ -435,6 +435,6 @@
     <div id="centerTip" class="center-tip" aria-live="polite" aria-atomic="true"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="./app.js?v=46"></script>
+    <script src="./app.js?v=47"></script>
   </body>
 </html>

@@ -686,9 +686,12 @@
 
     // zoom < 1.0: 더 넓게 보이도록(덜 확대) / zoom > 1.0: 더 확대
     const zoom = getBgZoom();
-    const scale = Math.max(CANVAS_W / iw, CANVAS_H / ih) * zoom;
-    const sw = CANVAS_W / scale;
-    const sh = CANVAS_H / scale;
+    const baseScale = Math.max(CANVAS_W / iw, CANVAS_H / ih);
+    // cover 상태에서 소스 범위를 넘어가면 drawImage가 깨질 수 있어, 최소 배율은 cover(baseScale)로 고정
+    const scale = Math.max(baseScale, baseScale * zoom);
+    // 소스 영역이 이미지보다 커지지 않도록 안전 클램프
+    const sw = Math.min(iw, CANVAS_W / scale);
+    const sh = Math.min(ih, CANVAS_H / scale);
     // 배경 이동: +X(오른쪽) => crop window를 왼쪽으로(sx 감소)
     const sx0 = (iw - sw) / 2;
     const sy0 = (ih - sh) / 2;
@@ -699,7 +702,13 @@
 
     sy = Math.max(0, Math.min(sy, ih - sh));
     sx = Math.max(0, Math.min(sx, iw - sw));
-    targetCtx.drawImage(bgImg, sx, sy, sw, sh, 0, 0, CANVAS_W, CANVAS_H);
+    try {
+      targetCtx.drawImage(bgImg, sx, sy, sw, sh, 0, 0, CANVAS_W, CANVAS_H);
+    } catch (e) {
+      // 안전장치: 드물게 sw/sh 경계에서 예외가 나면 기본 cover로 다시 그리기
+      console.error(e);
+      targetCtx.drawImage(bgImg, sx0, sy0, Math.min(iw, CANVAS_W / baseScale), Math.min(ih, CANVAS_H / baseScale), 0, 0, CANVAS_W, CANVAS_H);
+    }
   }
 
   function drawBackgroundCover() {
