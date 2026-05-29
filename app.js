@@ -724,9 +724,24 @@
     const dx = dx0 + getBgShiftX();
     const dy = dy0 + getBgShiftY();
 
-    // 남는 영역은 검정으로 채우기(비어 보이는 문제 방지)
-    targetCtx.fillStyle = "#000";
-    targetCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    // 남는 영역(빈 부분)은 검정 대신 "배경 블러 커버"로 채우기
+    // => 줌 축소/이동 후에도 검정 칸이 보이지 않게 처리
+    const coverScale = baseScale; // zoom=1 cover
+    const swCover = CANVAS_W / coverScale;
+    const shCover = CANVAS_H / coverScale;
+    const sx0 = (iw - swCover) / 2;
+    const sy0 = (ih - shCover) / 2;
+    const shiftXSrc = getBgShiftX() / coverScale;
+    const shiftYSrc = getBgShiftY() / coverScale;
+    let sx = sx0 - shiftXSrc;
+    let sy = sy0 - shiftYSrc;
+    sy = Math.max(0, Math.min(sy, ih - shCover));
+    sx = Math.max(0, Math.min(sx, iw - swCover));
+
+    targetCtx.save();
+    targetCtx.filter = "blur(16px) saturate(1.1) brightness(0.9)";
+    targetCtx.drawImage(bgImg, sx, sy, swCover, shCover, 0, 0, CANVAS_W, CANVAS_H);
+    targetCtx.restore();
     targetCtx.drawImage(bgImg, dx, dy, dw, dh);
   }
 
