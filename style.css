@@ -230,6 +230,18 @@ label.mini{
   margin-top:10px;
 }
 
+.cloud-actions{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cloud-actions button{
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
 .text-move-list{
   margin-top:10px;
   display:grid;

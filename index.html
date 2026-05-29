@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./style.css?v=21" />
+    <link rel="stylesheet" href="./style.css?v=22" />
   </head>
   <body>
     <div class="app">
@@ -123,7 +123,7 @@
 
           <label>
             배경 확대/축소 (0.80~1.20 권장, 1.00=기본)
-            <input id="inpBgZoom" type="number" step="0.01" min="0.5" max="2" value="1.00" />
+            <input id="inpBgZoom" type="number" step="0.001" min="0.5" max="2" value="1.000" />
             <div class="zoom-stepper">
               <button id="btnZoomOut" class="secondary" type="button">축소 -0.1%</button>
               <button id="btnZoomIn" class="secondary" type="button">확대 +0.1%</button>
@@ -409,6 +409,11 @@
           <button id="btnReset" class="secondary" type="button">기본값</button>
         </div>
 
+        <div class="cloud-actions">
+          <button id="btnCloudLoad" class="secondary" type="button">클라우드 불러오기</button>
+          <button id="btnCloudSave" class="secondary" type="button">클라우드 저장</button>
+        </div>
+
         <details class="howto">
           <summary>서버 실행(권장)</summary>
           <ol>
@@ -430,6 +435,6 @@
     <div id="centerTip" class="center-tip" aria-live="polite" aria-atomic="true"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="./app.js?v=42"></script>
+    <script src="./app.js?v=46"></script>
   </body>
 </html>

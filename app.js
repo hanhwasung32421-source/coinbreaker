@@ -3,6 +3,16 @@
   const CANVAS_W = 462;
   const CANVAS_H = 354;
 
+  // ---- 클라우드 저장(Supabase) 설정 ----
+  // Supabase 대시보드(Project Settings → API)에서 아래 2개 값을 복사해서 넣어주세요.
+  // 예) SUPABASE_URL = "https://xxxx.supabase.co"
+  // 예) SUPABASE_ANON_KEY = "eyJhbGciOi..."
+  const SUPABASE_URL = "https://dyfycrmltqosezmsufup.supabase.co";
+  const SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5Znljcm1sdHFvc2V6bXN1ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMzg4MDIsImV4cCI6MjA5NTYxNDgwMn0.VpJCBdD1g8YZiaa6Zah9ZKIu3ydu_RkSgWCdEXe2QGw";
+  const SUPABASE_TABLE = "coinbreaker_state";
+  const SUPABASE_ROW_ID = "default";
+
   /** @type {HTMLCanvasElement} */
   const canvas = document.getElementById("cardCanvas");
   const ctx = canvas.getContext("2d");
@@ -25,6 +35,8 @@
     bgZoom: document.getElementById("inpBgZoom"),
     zoomIn: document.getElementById("btnZoomIn"),
     zoomOut: document.getElementById("btnZoomOut"),
+    cloudLoad: document.getElementById("btnCloudLoad"),
+    cloudSave: document.getElementById("btnCloudSave"),
     shiftUp: document.getElementById("btnShiftUp"),
     shiftDown: document.getElementById("btnShiftDown"),
     shiftLeft: document.getElementById("btnShiftLeft"),
@@ -137,6 +149,8 @@
   const LS_SIDE_TS = "coinbreaker_side_ts";
   const LS_ENTRY_TS = "coinbreaker_entry_ts";
 
+  const LS_CLOUD_LAST_PULL = "coinbreaker_cloud_last_pull";
+
   function getTs(key) {
     const v = Number(localStorage.getItem(key));
     return Number.isFinite(v) ? v : 0;
@@ -144,6 +158,167 @@
 
   function setTs(key) {
     localStorage.setItem(key, String(Date.now()));
+  }
+
+  function cloudConfigured() {
+    return !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+  }
+
+  function sbHeaders() {
+    return {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    };
+  }
+
+  function collectState() {
+    const toVal = (el) => (el ? String(el.value ?? "") : "");
+    return {
+      v: 1,
+      inputs: {
+        percentMin: toVal(els.percentMin),
+        percentMax: toVal(els.percentMax),
+        profitMin: toVal(els.profitMin),
+        profitMax: toVal(els.profitMax),
+        symbol: toVal(els.symbol),
+        side: toVal(els.side),
+        leverage: toVal(els.leverage),
+        entry: toVal(els.entry),
+        bgZoom: toVal(els.bgZoom),
+        count: toVal(els.count),
+        prefix: toVal(els.prefix),
+        padX: toVal(els.padX),
+        topPercentY: toVal(els.topPercentY),
+        topProfitY: toVal(els.topProfitY),
+        percentSignDy: toVal(els.percentSignDy),
+        sectionStartY: toVal(els.sectionStartY),
+        rowGap: toVal(els.rowGap),
+        labelToValueGap: toVal(els.labelToValueGap),
+        sideDx: toVal(els.sideDx),
+        sideDy: toVal(els.sideDy),
+        r1LabelDy: toVal(els.r1LabelDy),
+        r1ValueDy: toVal(els.r1ValueDy),
+        r2LabelDy: toVal(els.r2LabelDy),
+        r2ValueDy: toVal(els.r2ValueDy),
+        r3LabelDy: toVal(els.r3LabelDy),
+        r3ValueDy: toVal(els.r3ValueDy),
+        r4LabelDy: toVal(els.r4LabelDy),
+        r4ValueDy: toVal(els.r4ValueDy),
+      },
+      bg: { shiftX: bgShiftX, shiftY: bgShiftY },
+      textAdjust,
+    };
+  }
+
+  function applyState(state) {
+    if (!state || typeof state !== "object") return;
+    const s = state.inputs || {};
+    const setVal = (el, v) => {
+      if (!el || v == null) return;
+      el.value = String(v);
+    };
+    setVal(els.percentMin, s.percentMin);
+    setVal(els.percentMax, s.percentMax);
+    setVal(els.profitMin, s.profitMin);
+    setVal(els.profitMax, s.profitMax);
+    setVal(els.symbol, s.symbol);
+    if (s.side) {
+      setVal(els.side, s.side);
+      if (["LONG", "SHORT"].includes(String(s.side).toUpperCase())) setTs(LS_SIDE_TS);
+    }
+    setVal(els.leverage, s.leverage);
+    setVal(els.entry, s.entry);
+    if (s.entry) setTs(LS_ENTRY_TS);
+    setVal(els.bgZoom, s.bgZoom);
+    setVal(els.count, s.count);
+    setVal(els.prefix, s.prefix);
+
+    setVal(els.padX, s.padX);
+    setVal(els.topPercentY, s.topPercentY);
+    setVal(els.topProfitY, s.topProfitY);
+    setVal(els.percentSignDy, s.percentSignDy);
+    setVal(els.sectionStartY, s.sectionStartY);
+    setVal(els.rowGap, s.rowGap);
+    setVal(els.labelToValueGap, s.labelToValueGap);
+    setVal(els.sideDx, s.sideDx);
+    setVal(els.sideDy, s.sideDy);
+    setVal(els.r1LabelDy, s.r1LabelDy);
+    setVal(els.r1ValueDy, s.r1ValueDy);
+    setVal(els.r2LabelDy, s.r2LabelDy);
+    setVal(els.r2ValueDy, s.r2ValueDy);
+    setVal(els.r3LabelDy, s.r3LabelDy);
+    setVal(els.r3ValueDy, s.r3ValueDy);
+    setVal(els.r4LabelDy, s.r4LabelDy);
+    setVal(els.r4ValueDy, s.r4ValueDy);
+
+    if (state.bg) {
+      if (typeof state.bg.shiftX === "number") bgShiftX = state.bg.shiftX;
+      if (typeof state.bg.shiftY === "number") bgShiftY = state.bg.shiftY;
+    }
+
+    if (state.textAdjust && typeof state.textAdjust === "object") {
+      Object.keys(textAdjust).forEach((k) => delete textAdjust[k]);
+      Object.assign(textAdjust, state.textAdjust);
+    }
+
+    // 미리보기 엔트리 랜덤값 재계산
+    sampleEntry = null;
+    lastEntryBase = null;
+    renderAll();
+  }
+
+  async function cloudLoad() {
+    if (!cloudConfigured()) {
+      showToastFor("Supabase 설정값(SUPABASE_URL/ANON_KEY) 필요", 2000);
+      return;
+    }
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=data&id=eq.${encodeURIComponent(SUPABASE_ROW_ID)}&limit=1`;
+      const res = await fetch(url, { headers: sbHeaders() });
+      if (!res.ok) throw new Error(`load failed: ${res.status}`);
+      const rows = await res.json();
+      if (rows && rows[0] && rows[0].data) {
+        applyState(rows[0].data);
+        setTs(LS_CLOUD_LAST_PULL);
+        showToastFor("클라우드 불러오기 완료", 1500);
+      } else {
+        showToastFor("클라우드 데이터 없음", 1500);
+      }
+    } catch (e) {
+      console.error(e);
+      showToastFor("클라우드 불러오기 실패", 2000);
+    }
+  }
+
+  async function cloudSaveNow() {
+    if (!cloudConfigured()) {
+      showToastFor("Supabase 설정값(SUPABASE_URL/ANON_KEY) 필요", 2000);
+      return;
+    }
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?on_conflict=id`;
+      const body = [{ id: SUPABASE_ROW_ID, data: collectState() }];
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { ...sbHeaders(), Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`save failed: ${res.status}`);
+      showToastFor("클라우드 저장됨", 1200);
+    } catch (e) {
+      console.error(e);
+      showToastFor("클라우드 저장 실패", 2000);
+    }
+  }
+
+  let cloudSaveTimer = null;
+  let cloudReady = false;
+  function scheduleCloudSave() {
+    if (!cloudReady) return;
+    if (!cloudConfigured()) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(() => cloudSaveNow(), 1200);
   }
 
   function randFloat(min, max) {
@@ -964,7 +1139,10 @@
   }
 
   function bind() {
-    const reRender = () => renderAll();
+    const reRender = () => {
+      renderAll();
+      scheduleCloudSave();
+    };
     Object.values(els).forEach((el) => {
       if (!el) return;
       if (el.tagName === "INPUT" || el.tagName === "SELECT") {
@@ -979,6 +1157,8 @@
       els.entry.addEventListener("input", mark);
       els.entry.addEventListener("change", mark);
     }
+    if (els.cloudLoad) els.cloudLoad.addEventListener("click", cloudLoad);
+    if (els.cloudSave) els.cloudSave.addEventListener("click", cloudSaveNow);
 
     // 배경 확대/축소 0.1% 단위 버튼
     const bumpZoom = (delta) => {
@@ -991,9 +1171,20 @@
       // 0.1% = 0.001 단위이므로 소수 3자리로 표시
       els.bgZoom.value = clamped.toFixed(3);
       renderAll();
+      scheduleCloudSave();
     };
-    if (els.zoomIn) els.zoomIn.addEventListener("click", () => bumpZoom(+0.001));
-    if (els.zoomOut) els.zoomOut.addEventListener("click", () => bumpZoom(-0.001));
+    if (els.zoomIn)
+      els.zoomIn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        bumpZoom(+0.001);
+      });
+    if (els.zoomOut)
+      els.zoomOut.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        bumpZoom(-0.001);
+      });
 
     const doGenerate = () => {
       const n = getCount();
@@ -1140,6 +1331,7 @@
       if (key === "x") bgShiftX = Math.round(bgShiftX) + delta;
       else bgShiftY = Math.round(bgShiftY) + delta;
       renderAll();
+      scheduleCloudSave();
     };
     if (els.shiftUp) els.shiftUp.addEventListener("click", () => bump("y", -1));
     if (els.shiftDown) els.shiftDown.addEventListener("click", () => bump("y", +1));
@@ -1231,8 +1423,12 @@
   async function init() {
     bind();
     bindSideUi();
-    // 최초 진입: 무조건 LONG/SHORT부터 선택 → 기준진입가 입력까지 완료해야 넘어감
-    showModalStep("side");
+    // 클라우드 불러오기(가능하면) → 이후부터 자동 저장 활성화
+    cloudReady = false;
+    if (cloudConfigured()) {
+      await cloudLoad();
+    }
+    cloudReady = true;
     await ensureFontsReady();
 
     if (bgImg.complete) {
