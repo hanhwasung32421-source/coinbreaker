@@ -325,6 +325,17 @@ label input, label select{
   width:100%;
 }
 
+.zoom-stepper{
+  display:flex;
+  gap:8px;
+}
+
+.zoom-stepper button{
+  flex:1;
+  padding:8px 10px;
+  font-size:12px;
+}
+
 .side-toggle{
   display:flex;
   gap:8px;

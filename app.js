@@ -23,6 +23,8 @@
     entryReal: document.getElementById("inpEntryReal"),
     exit: document.getElementById("inpExit"),
     bgZoom: document.getElementById("inpBgZoom"),
+    zoomIn: document.getElementById("btnZoomIn"),
+    zoomOut: document.getElementById("btnZoomOut"),
     shiftUp: document.getElementById("btnShiftUp"),
     shiftDown: document.getElementById("btnShiftDown"),
     shiftLeft: document.getElementById("btnShiftLeft"),
@@ -977,6 +979,21 @@
       els.entry.addEventListener("input", mark);
       els.entry.addEventListener("change", mark);
     }
+
+    // 배경 확대/축소 0.1% 단위 버튼
+    const bumpZoom = (delta) => {
+      if (!els.bgZoom) return;
+      const cur = Number(els.bgZoom.value);
+      const next = (Number.isFinite(cur) ? cur : 1) + delta;
+      const min = Number(els.bgZoom.getAttribute("min") ?? 0.5);
+      const max = Number(els.bgZoom.getAttribute("max") ?? 2);
+      const clamped = Math.min(max, Math.max(min, next));
+      // 0.1% = 0.001 단위이므로 소수 3자리로 표시
+      els.bgZoom.value = clamped.toFixed(3);
+      renderAll();
+    };
+    if (els.zoomIn) els.zoomIn.addEventListener("click", () => bumpZoom(+0.001));
+    if (els.zoomOut) els.zoomOut.addEventListener("click", () => bumpZoom(-0.001));
 
     const doGenerate = () => {
       const n = getCount();
