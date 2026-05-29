@@ -1045,7 +1045,8 @@
     if (mode >= 0.15 && mode < 0.30) {
       const maxMx = Math.min(24, Math.floor(bgRect.w * 0.08));
       const maxMy = Math.min(24, Math.floor(bgRect.h * 0.08));
-      const mxL = randInt(0, Math.max(0, maxMx));
+      // 왼쪽 글씨 절대 안 잘리게: 항상 배경의 왼쪽 끝부터 시작
+      const mxL = 0;
       const mxR = randInt(0, Math.max(0, maxMx));
       const myT = randInt(0, Math.max(0, maxMy));
       const myB = randInt(0, Math.max(0, maxMy));
@@ -1106,17 +1107,20 @@
 
     const extraW = mode < 0.15 ? randInt(80, 260) : randInt(40, 220);
     const extraH = mode < 0.15 ? randInt(60, 160) : randInt(20, 120);
-    const wUpper = Math.min(bgRect.w, reqW + extraW);
+    // 왼쪽은 고정(L)이고 오른쪽만 랜덤: 최소 폭은 "필수 포함 영역"의 오른쪽 끝(reqMaxX)까지
+    const minReqW = Math.max(1, reqMaxX - L);
+    if (minReqW >= bgRect.w) return { x: L, y: T, w: bgRect.w, h: bgRect.h };
+
+    const wUpper = Math.min(bgRect.w, minReqW + extraW);
     const hUpper = Math.min(bgRect.h, reqH + extraH);
-    const w = randInt(reqW, Math.max(reqW, wUpper));
+    const w = randInt(minReqW, Math.max(minReqW, wUpper));
     const h = randInt(reqH, Math.max(reqH, hUpper));
 
-    const xMin = Math.max(L, reqMaxX - w);
-    const xMax = Math.min(R - w, reqX);
+    // x는 항상 배경의 왼쪽 끝
+    const x = L;
     const yMin = Math.max(T, reqMaxY - h);
     const yMax = Math.min(B - h, reqY);
 
-    const x = randInt(Math.min(xMin, xMax), Math.max(xMin, xMax));
     const y = randInt(Math.min(yMin, yMax), Math.max(yMin, yMax));
     return { x, y, w, h };
   }
