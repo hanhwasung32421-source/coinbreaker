@@ -684,31 +684,42 @@
     const ih = bgImg.naturalHeight || bgImg.height;
     if (!iw || !ih) return;
 
-    // zoom < 1.0: 더 넓게 보이도록(덜 확대) / zoom > 1.0: 더 확대
+    // cover(기본) 기준 배율
     const zoom = getBgZoom();
     const baseScale = Math.max(CANVAS_W / iw, CANVAS_H / ih);
-    // cover 상태에서 소스 범위를 넘어가면 drawImage가 깨질 수 있어, 최소 배율은 cover(baseScale)로 고정
-    const scale = Math.max(baseScale, baseScale * zoom);
-    // 소스 영역이 이미지보다 커지지 않도록 안전 클램프
-    const sw = Math.min(iw, CANVAS_W / scale);
-    const sh = Math.min(ih, CANVAS_H / scale);
-    // 배경 이동: +X(오른쪽) => crop window를 왼쪽으로(sx 감소)
-    const sx0 = (iw - sw) / 2;
-    const sy0 = (ih - sh) / 2;
-    const shiftXSrc = getBgShiftX() / scale;
-    const shiftYSrc = getBgShiftY() / scale;
-    let sx = sx0 - shiftXSrc;
-    let sy = sy0 - shiftYSrc;
+    const scale = baseScale * zoom;
 
-    sy = Math.max(0, Math.min(sy, ih - sh));
-    sx = Math.max(0, Math.min(sx, iw - sw));
-    try {
+    // zoom >= 1: "크롭창 이동" 방식 (기존 cover 이동)
+    if (zoom >= 1) {
+      const sw = CANVAS_W / scale;
+      const sh = CANVAS_H / scale;
+      const sx0 = (iw - sw) / 2;
+      const sy0 = (ih - sh) / 2;
+      const shiftXSrc = getBgShiftX() / scale;
+      const shiftYSrc = getBgShiftY() / scale;
+      let sx = sx0 - shiftXSrc;
+      let sy = sy0 - shiftYSrc;
+
+      sy = Math.max(0, Math.min(sy, ih - sh));
+      sx = Math.max(0, Math.min(sx, iw - sw));
       targetCtx.drawImage(bgImg, sx, sy, sw, sh, 0, 0, CANVAS_W, CANVAS_H);
-    } catch (e) {
-      // 안전장치: 드물게 sw/sh 경계에서 예외가 나면 기본 cover로 다시 그리기
-      console.error(e);
-      targetCtx.drawImage(bgImg, sx0, sy0, Math.min(iw, CANVAS_W / baseScale), Math.min(ih, CANVAS_H / baseScale), 0, 0, CANVAS_W, CANVAS_H);
+      return;
     }
+
+    // zoom < 1: 이미지가 캔버스보다 작아질 수 있으므로 "캔버스 위에서 이미지 자체를 이동" 방식으로 처리
+    // (이때 네비게이터는 dest 좌표를 움직여서 항상 동작하게 함)
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx0 = (CANVAS_W - dw) / 2;
+    const dy0 = (CANVAS_H - dh) / 2;
+
+    const dx = dx0 + getBgShiftX();
+    const dy = dy0 + getBgShiftY();
+
+    // 남는 영역은 검정으로 채우기(비어 보이는 문제 방지)
+    targetCtx.fillStyle = "#000";
+    targetCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    targetCtx.drawImage(bgImg, dx, dy, dw, dh);
   }
 
   function drawBackgroundCover() {
