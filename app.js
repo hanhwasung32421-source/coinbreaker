@@ -35,6 +35,8 @@
     bgZoom: document.getElementById("inpBgZoom"),
     zoomIn: document.getElementById("btnZoomIn"),
     zoomOut: document.getElementById("btnZoomOut"),
+    bgShiftX: document.getElementById("inpBgShiftX"),
+    bgShiftY: document.getElementById("inpBgShiftY"),
     cloudLoad: document.getElementById("btnCloudLoad"),
     cloudSave: document.getElementById("btnCloudSave"),
     shiftUp: document.getElementById("btnShiftUp"),
@@ -265,6 +267,7 @@
     // 미리보기 엔트리 랜덤값 재계산
     sampleEntry = null;
     lastEntryBase = null;
+    syncBgShiftInputs();
     renderAll();
   }
 
@@ -319,6 +322,11 @@
     if (!cloudConfigured()) return;
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(() => cloudSaveNow(), 1200);
+  }
+
+  function syncBgShiftInputs() {
+    if (els.bgShiftX) els.bgShiftX.value = String(Math.round(bgShiftX));
+    if (els.bgShiftY) els.bgShiftY.value = String(Math.round(bgShiftY));
   }
 
   function randFloat(min, max) {
@@ -1037,14 +1045,29 @@
 
     // (2) 15% - 전체 이미지
       // 전체 화면 크롭이어도 "배경이 그려진 영역까지만"(검정 빈 영역 제외)
-      return { x: L, y: T, w: bgRect.w, h: bgRect.h };
-      return { x: 0, y: 0, w: W, h: H };
+      // 전체 화면 크롭이어도 "배경이 그려진 영역까지만"(검정 빈 영역 제외)
+      // + 너무 딱 맞게만 나오지 않도록, 배경 영역 안에서 랜덤 마진을 줌
+      const maxMx = Math.min(24, Math.floor(bgRect.w * 0.08));
+      const maxMy = Math.min(24, Math.floor(bgRect.h * 0.08));
+      const mxL = randInt(0, Math.max(0, maxMx));
+      const mxR = randInt(0, Math.max(0, maxMx));
+      const myT = randInt(0, Math.max(0, maxMy));
+      const myB = randInt(0, Math.max(0, maxMy));
+      const x = L + mxL;
+      const y = T + myT;
+      const w = Math.max(1, bgRect.w - mxL - mxR);
+      const h = Math.max(1, bgRect.h - myT - myB);
+      return { x, y, w, h };
 
     // 글씨가 절대 안 짤리도록 여유(패딩) 넉넉하게
     const padL = randInt(24, 48);
-    const padT = randInt(18, 44);
-    const padR = randInt(24, 48);
-    const padB = randInt(18, 44);
+    // 배경이 축소된 상태(bgRect가 작을 때)에도 랜덤 크롭이 되도록 패딩을 bgRect 크기에 비례해 제한
+    const padMaxX = Math.max(10, Math.floor(bgRect.w * 0.18));
+    const padMaxY = Math.max(10, Math.floor(bgRect.h * 0.18));
+    const padL = randInt(10, padMaxX);
+    const padT = randInt(10, padMaxY);
+    const padR = randInt(10, padMaxX);
+    const padB = randInt(10, padMaxY);
 
     let boxes = [];
     if (mode < 0.15) {
@@ -1068,6 +1091,7 @@
     });
 
     const clamp = (v, a, b) => Math.max(a, Math.min(v, b));
+    // 필수 포함 영역(텍스트 포함)도 배경 영역 안으로만 클램프
     const reqX = clamp(Math.floor(minX - padL), L, R);
     const reqY = clamp(Math.floor(minY - padT), T, B);
     const reqMaxX = clamp(Math.ceil(maxX + padR), L, R);
@@ -1077,16 +1101,18 @@
 
     const extraW = mode < 0.15 ? randInt(80, 260) : randInt(40, 220);
     const extraH = mode < 0.15 ? randInt(60, 160) : randInt(20, 120);
-    const w = Math.min(bgRect.w, randInt(reqW, Math.min(bgRect.w, reqW + extraW)));
-    const h = Math.min(bgRect.h, randInt(reqH, Math.min(bgRect.h, reqH + extraH)));
+    const wUpper = Math.min(bgRect.w, reqW + extraW);
+    const hUpper = Math.min(bgRect.h, reqH + extraH);
+    const w = randInt(reqW, Math.max(reqW, wUpper));
+    const h = randInt(reqH, Math.max(reqH, hUpper));
 
     const xMin = Math.max(L, reqMaxX - w);
     const xMax = Math.min(R - w, reqX);
     const yMin = Math.max(T, reqMaxY - h);
     const yMax = Math.min(B - h, reqY);
 
-    const x = randInt(xMin, xMax);
-    const y = randInt(yMin, yMax);
+    const x = randInt(Math.min(xMin, xMax), Math.max(xMin, xMax));
+    const y = randInt(Math.min(yMin, yMax), Math.max(yMin, yMax));
     return { x, y, w, h };
   }
 
@@ -1246,6 +1272,22 @@
         bumpZoom(-0.001);
       });
 
+    // 배경 이동 좌표 입력(X/Y)
+    if (els.bgShiftX)
+      els.bgShiftX.addEventListener("input", () => {
+        const v = Number(els.bgShiftX.value);
+        if (Number.isFinite(v)) bgShiftX = Math.round(v);
+        renderAll();
+        scheduleCloudSave();
+      });
+    if (els.bgShiftY)
+      els.bgShiftY.addEventListener("input", () => {
+        const v = Number(els.bgShiftY.value);
+        if (Number.isFinite(v)) bgShiftY = Math.round(v);
+        renderAll();
+        scheduleCloudSave();
+      });
+
     const doGenerate = () => {
       const n = getCount();
       const baseEntry = (els.entry?.value || "").trim();
@@ -1392,6 +1434,7 @@
       else bgShiftY = Math.round(bgShiftY) + delta;
       renderAll();
       scheduleCloudSave();
+      syncBgShiftInputs();
     };
     if (els.shiftUp) els.shiftUp.addEventListener("click", () => bump("y", -1));
     if (els.shiftDown) els.shiftDown.addEventListener("click", () => bump("y", +1));
@@ -1402,6 +1445,8 @@
         bgShiftX = 0;
         bgShiftY = 28;
         renderAll();
+        syncBgShiftInputs();
+        scheduleCloudSave();
       });
 
     // 텍스트 항목별 1px 이동 버튼
@@ -1483,6 +1528,7 @@
   async function init() {
     bind();
     bindSideUi();
+    syncBgShiftInputs();
     // 클라우드 불러오기(가능하면) → 이후부터 자동 저장 활성화
     cloudReady = false;
     if (cloudConfigured()) {

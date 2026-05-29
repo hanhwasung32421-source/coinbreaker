@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./style.css?v=22" />
+    <link rel="stylesheet" href="./style.css?v=23" />
   </head>
   <body>
     <div class="app">
@@ -141,6 +141,16 @@
             </div>
             <div class="bg-move-row">
               <button id="btnShiftDown" class="secondary" type="button">아래 1px</button>
+            </div>
+            <div class="bg-shift-inputs">
+              <label class="mini">
+                배경 X
+                <input id="inpBgShiftX" type="number" step="1" value="0" />
+              </label>
+              <label class="mini">
+                배경 Y
+                <input id="inpBgShiftY" type="number" step="1" value="28" />
+              </label>
             </div>
           </div>
 
@@ -435,6 +445,6 @@
     <div id="centerTip" class="center-tip" aria-live="polite" aria-atomic="true"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="./app.js?v=49"></script>
+    <script src="./app.js?v=51"></script>
   </body>
 </html>
