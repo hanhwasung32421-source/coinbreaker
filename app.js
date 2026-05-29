@@ -1131,9 +1131,20 @@
     }
 
     const crop = computeCropRect();
-    const scale = randFloat(0.7, 1.2);
+    // 화질 개선: 업스케일(>1.0)에서 품질 저하가 커서, 랜덤은 유지하되 1.0 이하로 제한(다운스케일만)
+    const scale = randFloat(0.7, 1.0);
     const outW = Math.max(1, Math.round(crop.w * scale));
     const outH = Math.max(1, Math.round(crop.h * scale));
+
+    // 다운스케일 품질 개선(슈퍼샘플링): 2배로 렌더링 후 다시 축소
+    const SS = 2;
+    const hi = document.createElement("canvas");
+    hi.width = outW * SS;
+    hi.height = outH * SS;
+    const hiCtx = hi.getContext("2d");
+    hiCtx.imageSmoothingEnabled = true;
+    hiCtx.imageSmoothingQuality = "high";
+    hiCtx.drawImage(canvas, crop.x, crop.y, crop.w, crop.h, 0, 0, hi.width, hi.height);
 
     const off = document.createElement("canvas");
     off.width = outW;
@@ -1141,7 +1152,7 @@
     const offCtx = off.getContext("2d");
     offCtx.imageSmoothingEnabled = true;
     offCtx.imageSmoothingQuality = "high";
-    offCtx.drawImage(canvas, crop.x, crop.y, crop.w, crop.h, 0, 0, outW, outH);
+    offCtx.drawImage(hi, 0, 0, hi.width, hi.height, 0, 0, outW, outH);
 
     const blob = await new Promise((resolve, reject) => {
       off.toBlob((b) => (b ? resolve(b) : reject(new Error("이미지 변환 실패"))), "image/png");
