@@ -591,6 +591,13 @@
     return (intVal / 100000).toFixed(5);
   }
 
+  function trimTrailingZeroIn5dp(text) {
+    // "0.10050" -> "0.1005" / "0.10000" -> "0.1"
+    const s = String(text || "").trim();
+    if (!s.includes(".")) return s;
+    return s.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  }
+
   function randomEntryFromBase(entryBaseText) {
     const baseInt = parseEntryToInt(entryBaseText);
     if (baseInt == null) return String(entryBaseText || "").trim();
@@ -598,7 +605,8 @@
     const deltas = [-2, -1, 1, 2];
     const d = deltas[Math.floor(Math.random() * deltas.length)];
     const next = Math.max(0, baseInt + d);
-    return entryIntToText(next);
+    // 예: 0.10050 이 나오면 스크린샷에는 0.1005 로 보이게(끝 0 제거)
+    return trimTrailingZeroIn5dp(entryIntToText(next));
   }
 
   function parseLeverage(text) {
