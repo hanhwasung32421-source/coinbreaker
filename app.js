@@ -634,7 +634,8 @@
     const isShort = String(side || "").toUpperCase() === "SHORT";
     const raw = isShort ? e * (1 - p) : e * (1 + p);
     const rounded = roundTo(raw, 5);
-    return rounded.toFixed(5);
+    // 예: 0.10050 이 나오면 스크린샷에는 0.1005 로 보이게(끝 0 제거)
+    return trimTrailingZeroIn5dp(rounded.toFixed(5));
   }
 
   function getBgZoom() {
