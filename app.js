@@ -602,7 +602,8 @@
     const baseInt = parseEntryToInt(entryBaseText);
     if (baseInt == null) return String(entryBaseText || "").trim();
     // 마지막 자리(소수 5번째 자리) 기준 +-2
-    const deltas = [-2, -1, 1, 2];
+    // 요청: 본 가격(0)도 포함해서 -2,-1,0,+1,+2 중 랜덤
+    const deltas = [-2, -1, 0, 1, 2];
     const d = deltas[Math.floor(Math.random() * deltas.length)];
     const next = Math.max(0, baseInt + d);
     // 예: 0.10050 이 나오면 스크린샷에는 0.1005 로 보이게(끝 0 제거)
