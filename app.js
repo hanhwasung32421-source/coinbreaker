@@ -989,7 +989,10 @@
     if (els.side) els.side.value = value;
     if (sideUi.longBtn) sideUi.longBtn.classList.toggle("active", value === "LONG");
     if (sideUi.shortBtn) sideUi.shortBtn.classList.toggle("active", value === "SHORT");
+    // LONG/SHORT 선택도 다른 값들처럼 클라우드 저장 대상
+    if (["LONG", "SHORT"].includes(String(value).toUpperCase())) setTs(LS_SIDE_TS);
     renderAll();
+    scheduleCloudSave();
   }
 
   function bindSideUi() {
@@ -997,12 +1000,10 @@
     if (sideUi.longBtn)
       sideUi.longBtn.addEventListener("click", () => {
         setSide("LONG", { closeModal: false });
-        setTs(LS_SIDE_TS);
       });
     if (sideUi.shortBtn)
       sideUi.shortBtn.addEventListener("click", () => {
         setSide("SHORT", { closeModal: false });
-        setTs(LS_SIDE_TS);
       });
   }
 
