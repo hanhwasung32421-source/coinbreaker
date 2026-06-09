@@ -1515,6 +1515,7 @@
     let firstPresetHintShown = false;
     document.querySelectorAll(".preset-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
+        const presetId = btn.getAttribute("data-preset");
         const pmin = btn.getAttribute("data-pmin");
         const pmax = btn.getAttribute("data-pmax");
         if (els.profitMin && pmin != null) els.profitMin.value = String(pmin);
@@ -1531,7 +1532,6 @@
           if (phrase && phrase !== lastPresetPhrase) break;
         }
         lastPresetPhrase = phrase;
-        const presetId = btn.getAttribute("data-preset");
         const caption = presetId ? document.querySelector(`.preset-caption[data-preset="${presetId}"]`) : null;
         if (caption) {
           caption.textContent = phrase;
