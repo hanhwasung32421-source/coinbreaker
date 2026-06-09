@@ -65,6 +65,49 @@
             <div class="preset-caption" data-preset="9"></div>
             <div class="preset-caption" data-preset="10"></div>
           </div>
+
+          <details class="phrase-settings">
+            <summary>프리셋 문구(자동 생성) 조합 설정</summary>
+            <div class="phrase-help">
+              프리셋을 누르면 아래 규칙으로 문구가 자동 생성됩니다. 원하는대로 조합을 수정하고 “설정 저장”을 누르세요.
+              <br />
+              <span class="phrase-help-mini">
+                입력 형식: 한 줄에 하나씩. 가중치를 주려면 <code>문구|숫자</code> (예: <code>감사합니다|2</code>). 빈 문구도 가능(그냥 빈 줄).
+              </span>
+            </div>
+
+            <div class="phrase-grid">
+              <label class="span-2">
+                1) 수익률 숫자 포맷 (int=정수, 1=소수1자리, 2=소수2자리)
+                <textarea id="inpPhraseFmt" rows="3" spellcheck="false"></textarea>
+              </label>
+
+              <label class="span-2">
+                2) 단위(뒤에 붙는 글자)
+                <textarea id="inpPhraseUnit" rows="3" spellcheck="false"></textarea>
+              </label>
+
+              <label class="span-2">
+                3) 기본 마무리 문구
+                <textarea id="inpPhrasePart3" rows="4" spellcheck="false"></textarea>
+              </label>
+
+              <label class="span-2">
+                4) 추가 마무리 문구(확률적으로 붙음)
+                <textarea id="inpPhrasePart4" rows="4" spellcheck="false"></textarea>
+              </label>
+
+              <label>
+                4) 추가 문구 붙는 확률(%)
+                <input id="inpPhrasePart4Prob" type="number" min="0" max="100" step="1" value="25" />
+              </label>
+
+              <div class="phrase-actions">
+                <button id="btnPhraseSave" class="primary" type="button">설정 저장</button>
+                <button id="btnPhraseReset" class="secondary" type="button">기본값 복원</button>
+              </div>
+            </div>
+          </details>
         </div>
         <h1>수치 조정</h1>
 

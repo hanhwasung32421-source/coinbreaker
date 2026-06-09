@@ -70,6 +70,14 @@
     reroll: document.getElementById("btnReroll"),
     reset: document.getElementById("btnReset"),
 
+    // 프리셋 문구(자동 생성) 설정
+    phraseFmt: document.getElementById("inpPhraseFmt"),
+    phraseUnit: document.getElementById("inpPhraseUnit"),
+    phrasePart3: document.getElementById("inpPhrasePart3"),
+    phrasePart4: document.getElementById("inpPhrasePart4"),
+    phrasePart4Prob: document.getElementById("inpPhrasePart4Prob"),
+    phraseSave: document.getElementById("btnPhraseSave"),
+    phraseReset: document.getElementById("btnPhraseReset"),
   };
 
   const sideUi = {
@@ -78,6 +86,124 @@
   };
 
   let lastPresetPhrase = "";
+
+  // ---- 프리셋 문구(자동 생성) 설정 ----
+  const LS_PHRASE_CFG = "coinbreaker_phrase_cfg_v1";
+  const DEFAULT_PHRASE_CFG = {
+    // 1) 수익률 숫자 포맷: int / 1 / 2 (가중치 적용 가능)
+    fmt: ["int", "2", "1"],
+    // 2) 단위
+    unit: ["%", "프로", "퍼", ""],
+    // 3) 기본 마무리 문구(가중치: 감사합니다 2, 고맙습니다 2, 수익입니다 1)
+    part3: ["감사합니다", "감사합니다", "고맙습니다", "고맙습니다", "수익입니다"],
+    // 4) 추가 마무리 문구(확률적으로 붙음. 빈 문구도 가능)
+    part4: ["", "대표님.", "대단하십니다.", "대박입니다."],
+    part4Prob: 25, // %
+  };
+
+  function clamp(n, a, b) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return a;
+    return Math.max(a, Math.min(x, b));
+  }
+
+  function normalizeLines(text) {
+    return String(text ?? "")
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((x) => x.trimEnd());
+  }
+
+  function linesToWeightedArray(text, fallbackArr) {
+    const lines = normalizeLines(text);
+    const out = [];
+    for (const raw of lines) {
+      // 빈 줄도 허용(옵션으로 취급)
+      const line = raw.trim();
+      if (!raw) {
+        out.push("");
+        continue;
+      }
+      // "문구|2" 형태로 가중치
+      const m = line.match(/^(.*?)(?:\|(\d+))?$/);
+      const phrase = (m?.[1] ?? "").trim();
+      const w = m?.[2] ? clamp(Number(m[2]), 1, 50) : 1;
+      for (let i = 0; i < w; i++) out.push(phrase);
+    }
+    return out.length ? out : Array.isArray(fallbackArr) ? fallbackArr.slice() : [];
+  }
+
+  function pickFrom(arr, fallback = "") {
+    if (!Array.isArray(arr) || arr.length === 0) return fallback;
+    return arr[Math.floor(Math.random() * arr.length)] ?? fallback;
+  }
+
+  function loadPhraseCfg() {
+    try {
+      const raw = localStorage.getItem(LS_PHRASE_CFG);
+      if (!raw) return { ...DEFAULT_PHRASE_CFG };
+      const v = JSON.parse(raw);
+      return {
+        fmt: Array.isArray(v.fmt) ? v.fmt : DEFAULT_PHRASE_CFG.fmt,
+        unit: Array.isArray(v.unit) ? v.unit : DEFAULT_PHRASE_CFG.unit,
+        part3: Array.isArray(v.part3) ? v.part3 : DEFAULT_PHRASE_CFG.part3,
+        part4: Array.isArray(v.part4) ? v.part4 : DEFAULT_PHRASE_CFG.part4,
+        part4Prob: clamp(v.part4Prob, 0, 100),
+      };
+    } catch {
+      return { ...DEFAULT_PHRASE_CFG };
+    }
+  }
+
+  function savePhraseCfg(cfg) {
+    localStorage.setItem(LS_PHRASE_CFG, JSON.stringify(cfg));
+  }
+
+  function cfgArrayToText(arr) {
+    // 가중치까지 “그대로” 보여주기 위해 단순 join (중복은 그대로 노출)
+    return (arr || []).map((x) => String(x ?? "")).join("\n");
+  }
+
+  let phraseCfg = loadPhraseCfg();
+
+  function fillPhraseUiFromCfg() {
+    if (els.phraseFmt) els.phraseFmt.value = cfgArrayToText(phraseCfg.fmt);
+    if (els.phraseUnit) els.phraseUnit.value = cfgArrayToText(phraseCfg.unit);
+    if (els.phrasePart3) els.phrasePart3.value = cfgArrayToText(phraseCfg.part3);
+    if (els.phrasePart4) els.phrasePart4.value = cfgArrayToText(phraseCfg.part4);
+    if (els.phrasePart4Prob) els.phrasePart4Prob.value = String(clamp(phraseCfg.part4Prob, 0, 100));
+  }
+
+  function readPhraseCfgFromUi() {
+    const next = {
+      fmt: linesToWeightedArray(els.phraseFmt?.value, DEFAULT_PHRASE_CFG.fmt),
+      unit: linesToWeightedArray(els.phraseUnit?.value, DEFAULT_PHRASE_CFG.unit),
+      part3: linesToWeightedArray(els.phrasePart3?.value, DEFAULT_PHRASE_CFG.part3),
+      part4: linesToWeightedArray(els.phrasePart4?.value, DEFAULT_PHRASE_CFG.part4),
+      part4Prob: clamp(els.phrasePart4Prob?.value, 0, 100),
+    };
+    return next;
+  }
+
+  function bindPhraseUi() {
+    // UI가 없으면(구버전 HTML 등) 조용히 종료
+    if (!els.phraseFmt || !els.phraseSave || !els.phraseReset) return;
+
+    fillPhraseUiFromCfg();
+
+    els.phraseSave.addEventListener("click", () => {
+      phraseCfg = readPhraseCfgFromUi();
+      savePhraseCfg(phraseCfg);
+      showToastFor("프리셋 문구 설정 저장됨", 1200);
+    });
+
+    els.phraseReset.addEventListener("click", () => {
+      phraseCfg = { ...DEFAULT_PHRASE_CFG };
+      savePhraseCfg(phraseCfg);
+      fillPhraseUiFromCfg();
+      showToastFor("프리셋 문구 기본값 복원됨", 1200);
+    });
+  }
 
   function showToast(message) {
     if (!toastEl) return;
@@ -342,7 +468,8 @@
 
   function makePresetPhrase(percentValue) {
     // 1번 : ## / ##.## / ##.#
-    const fmt = ["int", "2", "1"][Math.floor(Math.random() * 3)];
+    const cfg = phraseCfg || DEFAULT_PHRASE_CFG;
+    const fmt = pickFrom(cfg.fmt, "int");
     const absP = Math.abs(Number(percentValue) || 0);
     let numText = "";
     // 반올림 금지: 버림(Trunc)으로 처리
@@ -360,15 +487,16 @@
     if (numText.endsWith(".0")) numText = numText.slice(0, -2);
 
     // 2번 : % / 프로 / 퍼 / (빈칸)
-    const unit = ["%", "프로", "퍼", ""][Math.floor(Math.random() * 4)];
+    const unit = pickFrom(cfg.unit, "%");
 
     // 3번 : 감사합니다(2) / 고맙습니다(2) / 수익입니다(1)
-    const part3 = ["감사합니다", "감사합니다", "고맙습니다", "고맙습니다", "수익입니다"][Math.floor(Math.random() * 5)];
+    const part3 = pickFrom(cfg.part3, "감사합니다");
 
     // 4번 : 25% 확률로만 추가 (추가될 때도 빈칸 가능)
     let part4 = "";
-    if (Math.random() < 0.25) {
-      part4 = ["", "대표님.", "대단하십니다.", "대박입니다."][Math.floor(Math.random() * 4)];
+    const p4prob = clamp(cfg.part4Prob, 0, 100) / 100;
+    if (Math.random() < p4prob) {
+      part4 = pickFrom(cfg.part4, "");
     }
 
     const first = `${numText}${unit}`.trim();
@@ -1558,6 +1686,7 @@
   }
 
   async function init() {
+    bindPhraseUi();
     bind();
     bindSideUi();
     syncBgShiftInputs();

@@ -137,6 +137,55 @@ canvas{
   user-select: text;
 }
 
+.phrase-settings{
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.phrase-help{
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.phrase-help-mini{
+  display:inline-block;
+  margin-top:6px;
+  color: rgba(231,238,252,.60);
+}
+
+.phrase-grid{
+  margin-top: 10px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.phrase-grid textarea{
+  width:100%;
+  padding:10px 10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);
+  background:#0c1220;
+  color:var(--text);
+  font-size:12px;
+  outline:none;
+  resize: vertical;
+  white-space: pre;
+}
+
+.phrase-grid textarea:focus{
+  border-color:rgba(10,191,127,.7);
+  box-shadow:0 0 0 3px rgba(10,191,127,.12);
+}
+
+.phrase-actions{
+  display:flex;
+  gap:10px;
+  align-items:end;
+  justify-content:flex-start;
+}
+
 .toast{
   position: fixed;
   left: 16px;
