@@ -84,6 +84,10 @@
   };
 
   let lastPresetPhrase = "";
+  // 프리셋(1~10)에서 "4) 추가 마무리 문구"가 중복되지 않도록 관리
+  // - 프리셋마다 붙을 수도/안 붙을 수도 있음
+  // - 붙는 경우(그리고 빈 문구가 아닌 경우) 다른 프리셋에서 이미 사용한 문구는 피함
+  const presetPart4ByPreset = {}; // { [presetId:string]: string|null }
 
   // ---- 프리셋 문구(자동 생성) 설정 ----
   const DEFAULT_PHRASE_CFG = {
@@ -135,6 +139,55 @@
     return arr[Math.floor(Math.random() * arr.length)] ?? fallback;
   }
 
+  function buildWeightMap(arr, { allowEmpty = true } = {}) {
+    /** @type {Map<string, number>} */
+    const m = new Map();
+    if (!Array.isArray(arr)) return m;
+    for (const v of arr) {
+      const s = String(v ?? "");
+      const key = s.trim();
+      if (!allowEmpty && !key) continue;
+      m.set(key, (m.get(key) ?? 0) + 1);
+    }
+    return m;
+  }
+
+  function pickWeightedFromMap(weightMap) {
+    const items = Array.from(weightMap.entries());
+    if (!items.length) return "";
+    const total = items.reduce((acc, [, w]) => acc + (Number.isFinite(w) ? w : 0), 0);
+    if (total <= 0) return items[0][0];
+    let r = Math.random() * total;
+    for (const [text, w] of items) {
+      r -= w;
+      if (r <= 0) return text;
+    }
+    return items[items.length - 1][0];
+  }
+
+  function pickUniquePart4ForPreset(cfg, presetId) {
+    // "4) 추가 마무리 문구"는 빈 문구("")도 옵션으로 존재할 수 있지만,
+    // "중복 방지"는 의미 있는 문구(빈칸 제외) 대상으로만 적용합니다.
+    const used = new Set(
+      Object.entries(presetPart4ByPreset)
+        .filter(([pid, v]) => pid !== String(presetId) && typeof v === "string" && v.trim())
+        .map(([, v]) => String(v).trim())
+    );
+
+    const weightMapAll = buildWeightMap(cfg.part4, { allowEmpty: false }); // 빈값 제외
+    if (weightMapAll.size === 0) return "";
+
+    // unused만 남긴 가중치맵
+    const weightMapUnused = new Map();
+    for (const [text, w] of weightMapAll.entries()) {
+      if (!used.has(text)) weightMapUnused.set(text, w);
+    }
+
+    // 모든 문구가 이미 사용된 경우엔(특이 케이스) 중복 허용으로 fallback
+    const picked = pickWeightedFromMap(weightMapUnused.size ? weightMapUnused : weightMapAll);
+    return String(picked || "").trim();
+  }
+
   function cfgArrayToText(arr) {
     // 가중치까지 “그대로” 보여주기 위해 단순 join (중복은 그대로 노출)
     return (arr || []).map((x) => String(x ?? "")).join("\n");
@@ -172,6 +225,8 @@
       phraseCfg = readPhraseCfgFromUi();
       // 다른 수치들처럼 변경 즉시 저장(클라우드 저장 타이머 사용)
       scheduleCloudSave();
+      // 조합이 바뀌면 중복 방지용 캐시도 초기화(새 조합으로 다시 분배)
+      Object.keys(presetPart4ByPreset).forEach((k) => delete presetPart4ByPreset[k]);
     };
     els.phraseFmt.addEventListener("input", onEdit);
     els.phraseUnit.addEventListener("input", onEdit);
@@ -458,7 +513,7 @@
     return Math.floor(Math.random() * (b - a + 1)) + a;
   }
 
-  function makePresetPhrase(percentValue) {
+  function makePresetPhrase(percentValue, presetId) {
     // 1번 : ## / ##.## / ##.#
     const cfg = phraseCfg || DEFAULT_PHRASE_CFG;
     const fmt = pickFrom(cfg.fmt, "int");
@@ -488,11 +543,14 @@
     let part4 = "";
     const p4prob = clamp(cfg.part4Prob, 0, 100) / 100;
     if (Math.random() < p4prob) {
-      part4 = pickFrom(cfg.part4, "");
+      // 프리셋 1~10 간 중복 방지(빈 문구 제외)
+      part4 = pickUniquePart4ForPreset(cfg, presetId);
     }
 
     const first = `${numText}${unit}`.trim();
     const rest = part4 ? `${part3} ${part4}` : part3;
+    // 현재 프리셋의 part4 사용 기록(빈 문구는 null로 저장)
+    if (presetId != null) presetPart4ByPreset[String(presetId)] = part4 && part4.trim() ? part4.trim() : null;
     return `${first} ${rest}`.trim();
   }
 
@@ -1469,7 +1527,7 @@
         const percentForPhrase = generatedItems?.[0]?.percent ?? samplePercent ?? 0;
         let phrase = "";
         for (let i = 0; i < 30; i++) {
-          phrase = makePresetPhrase(percentForPhrase);
+          phrase = makePresetPhrase(percentForPhrase, presetId);
           if (phrase && phrase !== lastPresetPhrase) break;
         }
         lastPresetPhrase = phrase;
