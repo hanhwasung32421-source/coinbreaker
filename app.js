@@ -141,18 +141,17 @@
     return arr[Math.floor(Math.random() * arr.length)] ?? fallback;
   }
 
-  function getUniquePart4List(cfg) {
+  function getPart4ListNonEmpty(cfg) {
+    // 중복 문구도 "각각의 항목"으로 취급해야 함:
+    // 예) "감사합니다", "감사합니다" 2개면 프리셋 배정 풀에서도 2개로 계산
     const arr = Array.isArray(cfg?.part4) ? cfg.part4 : [];
-    const uniq = [];
-    const seen = new Set();
+    const out = [];
     for (const v of arr) {
       const t = String(v ?? "").trim();
       if (!t) continue; // 빈칸 제외
-      if (seen.has(t)) continue;
-      seen.add(t);
-      uniq.push(t);
+      out.push(t);
     }
-    return uniq;
+    return out;
   }
 
   function shuffleInPlace(a) {
@@ -166,15 +165,15 @@
   }
 
   function ensurePresetPart4Assignment(cfg) {
-    const uniq = getUniquePart4List(cfg);
-    const key = uniq.join("\u0001");
+    const list = getPart4ListNonEmpty(cfg);
+    const key = list.join("\u0001");
     if (presetPart4Assignment && presetPart4PoolKey === key && presetPart4Assignment.length === 10) return presetPart4Assignment;
-    if (uniq.length < 10) {
+    if (list.length < 10) {
       presetPart4Assignment = null;
       presetPart4PoolKey = key;
       return null;
     }
-    const pool = shuffleInPlace(uniq.slice());
+    const pool = shuffleInPlace(list.slice());
     presetPart4Assignment = pool.slice(0, 10);
     presetPart4PoolKey = key;
     return presetPart4Assignment;
@@ -1513,11 +1512,11 @@
       btn.addEventListener("click", async () => {
         const presetId = btn.getAttribute("data-preset");
         // 4) 추가 마무리 문구는 프리셋 1~10에서 "절대 중복 없이" 10개를 배정해서 사용
-        // => 서로 다른 문구(빈칸 제외)가 10개 미만이면 경고 후 프리셋 동작 자체를 막음
+        // => (빈칸 제외) 항목 수가 10개 미만이면 경고 후 프리셋 동작 자체를 막음
         const cfg = phraseCfg || DEFAULT_PHRASE_CFG;
-        const uniqPart4 = getUniquePart4List(cfg);
-        if (uniqPart4.length < 10) {
-          showToastFor("4) 추가 마무리 문구가 10개 미만입니다. (서로 다른 문구 10개 이상 필요) ", 2500);
+        const part4List = getPart4ListNonEmpty(cfg);
+        if (part4List.length < 10) {
+          showToastFor("4) 추가 마무리 문구 항목이 10개 미만입니다. (빈칸 제외 10개 이상 필요)", 2500);
           return;
         }
         // 배정이 아직 없으면 여기서 한번 생성(프리셋 1~10에 골고루 분배)
