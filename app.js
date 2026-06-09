@@ -141,17 +141,12 @@
     return arr[Math.floor(Math.random() * arr.length)] ?? fallback;
   }
 
-  function getPart4ListNonEmpty(cfg) {
-    // 중복 문구도 "각각의 항목"으로 취급해야 함:
-    // 예) "감사합니다", "감사합니다" 2개면 프리셋 배정 풀에서도 2개로 계산
+  function getPart4ListAll(cfg) {
+    // "4) 추가 마무리 문구"는 중복 문구도 각각의 항목으로 취급.
+    // 또한 "빈칸 포함해서 10개" 규칙을 위해 빈칸도 항목으로 카운트/배정 가능하게 함.
+    // (빈칸이 배정되면 해당 프리셋은 추가 문구가 안 붙는 효과)
     const arr = Array.isArray(cfg?.part4) ? cfg.part4 : [];
-    const out = [];
-    for (const v of arr) {
-      const t = String(v ?? "").trim();
-      if (!t) continue; // 빈칸 제외
-      out.push(t);
-    }
-    return out;
+    return arr.map((v) => String(v ?? "").trim());
   }
 
   function shuffleInPlace(a) {
@@ -165,7 +160,7 @@
   }
 
   function ensurePresetPart4Assignment(cfg) {
-    const list = getPart4ListNonEmpty(cfg);
+    const list = getPart4ListAll(cfg);
     const key = list.join("\u0001");
     if (presetPart4Assignment && presetPart4PoolKey === key && presetPart4Assignment.length === 10) return presetPart4Assignment;
     if (list.length < 10) {
@@ -1512,11 +1507,11 @@
       btn.addEventListener("click", async () => {
         const presetId = btn.getAttribute("data-preset");
         // 4) 추가 마무리 문구는 프리셋 1~10에서 "절대 중복 없이" 10개를 배정해서 사용
-        // => (빈칸 제외) 항목 수가 10개 미만이면 경고 후 프리셋 동작 자체를 막음
+        // => (빈칸 포함) 항목 수가 10개 미만이면 경고 후 프리셋 동작 자체를 막음
         const cfg = phraseCfg || DEFAULT_PHRASE_CFG;
-        const part4List = getPart4ListNonEmpty(cfg);
+        const part4List = getPart4ListAll(cfg);
         if (part4List.length < 10) {
-          showToastFor("4) 추가 마무리 문구 항목이 10개 미만입니다. (빈칸 제외 10개 이상 필요)", 2500);
+          showToastFor(`4) 추가 마무리 문구 항목이 10개 미만입니다. (현재 ${part4List.length}개)`, 2500);
           return;
         }
         // 배정이 아직 없으면 여기서 한번 생성(프리셋 1~10에 골고루 분배)
