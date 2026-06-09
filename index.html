@@ -69,7 +69,7 @@
           <details class="phrase-settings">
             <summary>프리셋 문구(자동 생성) 조합 설정</summary>
             <div class="phrase-help">
-              프리셋을 누르면 아래 규칙으로 문구가 자동 생성됩니다. 원하는대로 조합을 수정하고 “설정 저장”을 누르세요.
+              프리셋을 누르면 아래 규칙으로 문구가 자동 생성됩니다. 원하는대로 조합을 수정하면 다른 수치들처럼 자동 저장됩니다.
               <br />
               <span class="phrase-help-mini">
                 입력 형식: 한 줄에 하나씩. 가중치를 주려면 <code>문구|숫자</code> (예: <code>감사합니다|2</code>). 빈 문구도 가능(그냥 빈 줄).
@@ -101,11 +101,6 @@
                 4) 추가 문구 붙는 확률(%)
                 <input id="inpPhrasePart4Prob" type="number" min="0" max="100" step="1" value="25" />
               </label>
-
-              <div class="phrase-actions">
-                <button id="btnPhraseSave" class="primary" type="button">설정 저장</button>
-                <button id="btnPhraseReset" class="secondary" type="button">기본값 복원</button>
-              </div>
             </div>
           </details>
         </div>

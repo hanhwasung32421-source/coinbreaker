@@ -179,13 +179,6 @@ canvas{
   box-shadow:0 0 0 3px rgba(10,191,127,.12);
 }
 
-.phrase-actions{
-  display:flex;
-  gap:10px;
-  align-items:end;
-  justify-content:flex-start;
-}
-
 .toast{
   position: fixed;
   left: 16px;

@@ -76,8 +76,6 @@
     phrasePart3: document.getElementById("inpPhrasePart3"),
     phrasePart4: document.getElementById("inpPhrasePart4"),
     phrasePart4Prob: document.getElementById("inpPhrasePart4Prob"),
-    phraseSave: document.getElementById("btnPhraseSave"),
-    phraseReset: document.getElementById("btnPhraseReset"),
   };
 
   const sideUi = {
@@ -166,22 +164,21 @@
 
   function bindPhraseUi() {
     // UI가 없으면(구버전 HTML 등) 조용히 종료
-    if (!els.phraseFmt || !els.phraseSave || !els.phraseReset) return;
+    if (!els.phraseFmt || !els.phraseUnit || !els.phrasePart3 || !els.phrasePart4 || !els.phrasePart4Prob) return;
 
     fillPhraseUiFromCfg();
 
-    els.phraseSave.addEventListener("click", () => {
+    const onEdit = () => {
       phraseCfg = readPhraseCfgFromUi();
-      showToastFor("프리셋 문구 설정 저장됨", 1200);
-      scheduleCloudSave(); // 다른 수치들처럼 DB에 저장
-    });
-
-    els.phraseReset.addEventListener("click", () => {
-      phraseCfg = JSON.parse(JSON.stringify(DEFAULT_PHRASE_CFG));
-      fillPhraseUiFromCfg();
-      showToastFor("프리셋 문구 기본값 복원됨", 1200);
-      scheduleCloudSave(); // 다른 수치들처럼 DB에 저장
-    });
+      // 다른 수치들처럼 변경 즉시 저장(클라우드 저장 타이머 사용)
+      scheduleCloudSave();
+    };
+    els.phraseFmt.addEventListener("input", onEdit);
+    els.phraseUnit.addEventListener("input", onEdit);
+    els.phrasePart3.addEventListener("input", onEdit);
+    els.phrasePart4.addEventListener("input", onEdit);
+    els.phrasePart4Prob.addEventListener("input", onEdit);
+    els.phrasePart4Prob.addEventListener("change", onEdit);
   }
 
   function showToast(message) {
