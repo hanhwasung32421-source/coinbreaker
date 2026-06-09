@@ -17,7 +17,7 @@ body{
 .app{
   display:grid;
   /* 왼쪽(미리보기)은 고정 폭으로 해서, 넓은 화면에서 생기는 '중간 빈 공간'을 없앱니다. */
-  grid-template-columns: 520px 600px;
+  grid-template-columns: 520px 600px minmax(340px, 1fr);
   justify-content:start;
   gap:24px;
   padding:24px;
@@ -356,6 +356,37 @@ label.mini{
   max-width:600px;
 }
 
+.sidepanel{
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.sidepanel .copied-preview-wrap{
+  margin-top: 0;
+}
+
+@media (max-width: 1500px){
+  .app{
+    grid-template-columns: 520px 600px;
+  }
+  .sidepanel{
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1160px){
+  .app{
+    grid-template-columns: 1fr;
+  }
+  .controls{
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+}
 .controls h1{
   margin:0 0 14px 0;
   font-size:18px;
