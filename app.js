@@ -84,11 +84,12 @@
   };
 
   let lastPresetPhrase = "";
-  // 프리셋(1~10)에서 "4) 추가 마무리 문구"가 중복되지 않도록 관리
-  // - 프리셋마다 붙을 수도/안 붙을 수도 있음
-  // - 붙는 경우(그리고 빈 문구가 아닌 경우) 다른 프리셋에서 이미 사용한 문구는 피함
-  const presetPart4ByPreset = {}; // { [presetId:string]: string|null }
-  let warnedPart4PoolExhausted = false;
+  // 프리셋(1~10)에서 "4) 추가 마무리 문구"를 1~10에 골고루(각각 1개씩) 배정하기 위한 매핑
+  // - 프리셋 1~10 버튼을 눌렀을 때는 "절대 중복"으로 붙도록(=프리셋 10개에 서로 다른 10개 배정) 동작
+  // - 서로 다른 추가문구(빈칸 제외)가 10개 미만이면 경고 후 프리셋 동작 자체를 막음
+  /** @type {string[] | null} */
+  let presetPart4Assignment = null; // index 0..9 => preset 1..10
+  let presetPart4PoolKey = "";
 
   // ---- 프리셋 문구(자동 생성) 설정 ----
   const DEFAULT_PHRASE_CFG = {
@@ -140,64 +141,43 @@
     return arr[Math.floor(Math.random() * arr.length)] ?? fallback;
   }
 
-  function buildWeightMap(arr, { allowEmpty = true } = {}) {
-    /** @type {Map<string, number>} */
-    const m = new Map();
-    if (!Array.isArray(arr)) return m;
+  function getUniquePart4List(cfg) {
+    const arr = Array.isArray(cfg?.part4) ? cfg.part4 : [];
+    const uniq = [];
+    const seen = new Set();
     for (const v of arr) {
-      const s = String(v ?? "");
-      const key = s.trim();
-      if (!allowEmpty && !key) continue;
-      m.set(key, (m.get(key) ?? 0) + 1);
+      const t = String(v ?? "").trim();
+      if (!t) continue; // 빈칸 제외
+      if (seen.has(t)) continue;
+      seen.add(t);
+      uniq.push(t);
     }
-    return m;
+    return uniq;
   }
 
-  function pickWeightedFromMap(weightMap) {
-    const items = Array.from(weightMap.entries());
-    if (!items.length) return "";
-    const total = items.reduce((acc, [, w]) => acc + (Number.isFinite(w) ? w : 0), 0);
-    if (total <= 0) return items[0][0];
-    let r = Math.random() * total;
-    for (const [text, w] of items) {
-      r -= w;
-      if (r <= 0) return text;
+  function shuffleInPlace(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = a[i];
+      a[i] = a[j];
+      a[j] = tmp;
     }
-    return items[items.length - 1][0];
+    return a;
   }
 
-  function pickUniquePart4ForPreset(cfg, presetId) {
-    // "4) 추가 마무리 문구"는 빈 문구("")도 옵션으로 존재할 수 있지만,
-    // "중복 방지"는 의미 있는 문구(빈칸 제외) 대상으로만 적용합니다.
-    const used = new Set(
-      Object.entries(presetPart4ByPreset)
-        .filter(([pid, v]) => pid !== String(presetId) && typeof v === "string" && v.trim())
-        .map(([, v]) => String(v).trim())
-    );
-
-    const weightMapAll = buildWeightMap(cfg.part4, { allowEmpty: false }); // 빈값 제외
-    if (weightMapAll.size === 0) return "";
-
-    // unused만 남긴 가중치맵
-    const weightMapUnused = new Map();
-    for (const [text, w] of weightMapAll.entries()) {
-      if (!used.has(text)) weightMapUnused.set(text, w);
+  function ensurePresetPart4Assignment(cfg) {
+    const uniq = getUniquePart4List(cfg);
+    const key = uniq.join("\u0001");
+    if (presetPart4Assignment && presetPart4PoolKey === key && presetPart4Assignment.length === 10) return presetPart4Assignment;
+    if (uniq.length < 10) {
+      presetPart4Assignment = null;
+      presetPart4PoolKey = key;
+      return null;
     }
-
-    // 모든 문구가 이미 사용된 경우:
-    // - "절대 중복되면 안 됨" 요구를 만족하기 위해 중복 허용 fallback을 하지 않고 빈 값으로 처리
-    // - 특히 확률 100%인 경우, 중복 없이 1~10 프리셋을 채우려면 서로 다른 문구가 최소 10개 필요
-    if (!weightMapUnused.size) {
-      const p = clamp(cfg.part4Prob, 0, 100);
-      if (p >= 100 && !warnedPart4PoolExhausted) {
-        warnedPart4PoolExhausted = true;
-        showToastFor("추가 문구가 부족해서(또는 중복 포함) 1~10 프리셋에 중복 없이 배정할 수 없습니다. 서로 다른 문구를 10개 이상 넣어주세요.", 3000);
-      }
-      return "";
-    }
-
-    const picked = pickWeightedFromMap(weightMapUnused);
-    return String(picked || "").trim();
+    const pool = shuffleInPlace(uniq.slice());
+    presetPart4Assignment = pool.slice(0, 10);
+    presetPart4PoolKey = key;
+    return presetPart4Assignment;
   }
 
   function cfgArrayToText(arr) {
@@ -237,9 +217,9 @@
       phraseCfg = readPhraseCfgFromUi();
       // 다른 수치들처럼 변경 즉시 저장(클라우드 저장 타이머 사용)
       scheduleCloudSave();
-      // 조합이 바뀌면 중복 방지용 캐시도 초기화(새 조합으로 다시 분배)
-      Object.keys(presetPart4ByPreset).forEach((k) => delete presetPart4ByPreset[k]);
-      warnedPart4PoolExhausted = false;
+      // 조합이 바뀌면 프리셋 1~10 배정도 초기화(새 조합으로 재배정)
+      presetPart4Assignment = null;
+      presetPart4PoolKey = "";
     };
     els.phraseFmt.addEventListener("input", onEdit);
     els.phraseUnit.addEventListener("input", onEdit);
@@ -552,18 +532,21 @@
     // 3번 : 감사합니다(2) / 고맙습니다(2) / 수익입니다(1)
     const part3 = pickFrom(cfg.part3, "감사합니다");
 
-    // 4번 : 25% 확률로만 추가 (추가될 때도 빈칸 가능)
+    // 4번 : 프리셋(1~10) 버튼에서는 "절대 중복 없이" 10개를 배정해서 붙임
+    //       (10개 미만이면 프리셋 클릭 자체가 막히므로 여기서는 안전장치만 둠)
     let part4 = "";
-    const p4prob = clamp(cfg.part4Prob, 0, 100) / 100;
-    if (Math.random() < p4prob) {
-      // 프리셋 1~10 간 중복 방지(빈 문구 제외)
-      part4 = pickUniquePart4ForPreset(cfg, presetId);
+    if (presetId != null) {
+      const assign = ensurePresetPart4Assignment(cfg);
+      const idx = Math.max(0, Math.min(9, Number(presetId) - 1));
+      part4 = assign ? String(assign[idx] ?? "").trim() : "";
+    } else {
+      // (예비) presetId가 없는 호출이 생기면 기존 확률 로직 사용
+      const p4prob = clamp(cfg.part4Prob, 0, 100) / 100;
+      if (Math.random() < p4prob) part4 = pickFrom(cfg.part4, "");
     }
 
     const first = `${numText}${unit}`.trim();
     const rest = part4 ? `${part3} ${part4}` : part3;
-    // 현재 프리셋의 part4 사용 기록(빈 문구는 null로 저장)
-    if (presetId != null) presetPart4ByPreset[String(presetId)] = part4 && part4.trim() ? part4.trim() : null;
     return `${first} ${rest}`.trim();
   }
 
@@ -1529,6 +1512,17 @@
     document.querySelectorAll(".preset-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const presetId = btn.getAttribute("data-preset");
+        // 4) 추가 마무리 문구는 프리셋 1~10에서 "절대 중복 없이" 10개를 배정해서 사용
+        // => 서로 다른 문구(빈칸 제외)가 10개 미만이면 경고 후 프리셋 동작 자체를 막음
+        const cfg = phraseCfg || DEFAULT_PHRASE_CFG;
+        const uniqPart4 = getUniquePart4List(cfg);
+        if (uniqPart4.length < 10) {
+          showToastFor("4) 추가 마무리 문구가 10개 미만입니다. (서로 다른 문구 10개 이상 필요) ", 2500);
+          return;
+        }
+        // 배정이 아직 없으면 여기서 한번 생성(프리셋 1~10에 골고루 분배)
+        ensurePresetPart4Assignment(cfg);
+
         const pmin = btn.getAttribute("data-pmin");
         const pmax = btn.getAttribute("data-pmax");
         if (els.profitMin && pmin != null) els.profitMin.value = String(pmin);
