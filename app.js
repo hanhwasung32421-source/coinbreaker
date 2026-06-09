@@ -88,6 +88,7 @@
   // - 프리셋마다 붙을 수도/안 붙을 수도 있음
   // - 붙는 경우(그리고 빈 문구가 아닌 경우) 다른 프리셋에서 이미 사용한 문구는 피함
   const presetPart4ByPreset = {}; // { [presetId:string]: string|null }
+  let warnedPart4PoolExhausted = false;
 
   // ---- 프리셋 문구(자동 생성) 설정 ----
   const DEFAULT_PHRASE_CFG = {
@@ -183,8 +184,19 @@
       if (!used.has(text)) weightMapUnused.set(text, w);
     }
 
-    // 모든 문구가 이미 사용된 경우엔(특이 케이스) 중복 허용으로 fallback
-    const picked = pickWeightedFromMap(weightMapUnused.size ? weightMapUnused : weightMapAll);
+    // 모든 문구가 이미 사용된 경우:
+    // - "절대 중복되면 안 됨" 요구를 만족하기 위해 중복 허용 fallback을 하지 않고 빈 값으로 처리
+    // - 특히 확률 100%인 경우, 중복 없이 1~10 프리셋을 채우려면 서로 다른 문구가 최소 10개 필요
+    if (!weightMapUnused.size) {
+      const p = clamp(cfg.part4Prob, 0, 100);
+      if (p >= 100 && !warnedPart4PoolExhausted) {
+        warnedPart4PoolExhausted = true;
+        showToastFor("추가 문구가 부족해서(또는 중복 포함) 1~10 프리셋에 중복 없이 배정할 수 없습니다. 서로 다른 문구를 10개 이상 넣어주세요.", 3000);
+      }
+      return "";
+    }
+
+    const picked = pickWeightedFromMap(weightMapUnused);
     return String(picked || "").trim();
   }
 
@@ -227,6 +239,7 @@
       scheduleCloudSave();
       // 조합이 바뀌면 중복 방지용 캐시도 초기화(새 조합으로 다시 분배)
       Object.keys(presetPart4ByPreset).forEach((k) => delete presetPart4ByPreset[k]);
+      warnedPart4PoolExhausted = false;
     };
     els.phraseFmt.addEventListener("input", onEdit);
     els.phraseUnit.addEventListener("input", onEdit);
