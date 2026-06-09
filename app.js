@@ -88,7 +88,6 @@
   let lastPresetPhrase = "";
 
   // ---- 프리셋 문구(자동 생성) 설정 ----
-  const LS_PHRASE_CFG = "coinbreaker_phrase_cfg_v1";
   const DEFAULT_PHRASE_CFG = {
     // 1) 수익률 숫자 포맷: int / 1 / 2 (가중치 적용 가능)
     fmt: ["int", "2", "1"],
@@ -138,33 +137,13 @@
     return arr[Math.floor(Math.random() * arr.length)] ?? fallback;
   }
 
-  function loadPhraseCfg() {
-    try {
-      const raw = localStorage.getItem(LS_PHRASE_CFG);
-      if (!raw) return { ...DEFAULT_PHRASE_CFG };
-      const v = JSON.parse(raw);
-      return {
-        fmt: Array.isArray(v.fmt) ? v.fmt : DEFAULT_PHRASE_CFG.fmt,
-        unit: Array.isArray(v.unit) ? v.unit : DEFAULT_PHRASE_CFG.unit,
-        part3: Array.isArray(v.part3) ? v.part3 : DEFAULT_PHRASE_CFG.part3,
-        part4: Array.isArray(v.part4) ? v.part4 : DEFAULT_PHRASE_CFG.part4,
-        part4Prob: clamp(v.part4Prob, 0, 100),
-      };
-    } catch {
-      return { ...DEFAULT_PHRASE_CFG };
-    }
-  }
-
-  function savePhraseCfg(cfg) {
-    localStorage.setItem(LS_PHRASE_CFG, JSON.stringify(cfg));
-  }
-
   function cfgArrayToText(arr) {
     // 가중치까지 “그대로” 보여주기 위해 단순 join (중복은 그대로 노출)
     return (arr || []).map((x) => String(x ?? "")).join("\n");
   }
 
-  let phraseCfg = loadPhraseCfg();
+  // DB(클라우드)에 저장/불러오기 할 값. 기본값으로 시작하고, cloudLoad()의 applyState에서 덮어씁니다.
+  let phraseCfg = JSON.parse(JSON.stringify(DEFAULT_PHRASE_CFG));
 
   function fillPhraseUiFromCfg() {
     if (els.phraseFmt) els.phraseFmt.value = cfgArrayToText(phraseCfg.fmt);
@@ -193,15 +172,15 @@
 
     els.phraseSave.addEventListener("click", () => {
       phraseCfg = readPhraseCfgFromUi();
-      savePhraseCfg(phraseCfg);
       showToastFor("프리셋 문구 설정 저장됨", 1200);
+      scheduleCloudSave(); // 다른 수치들처럼 DB에 저장
     });
 
     els.phraseReset.addEventListener("click", () => {
-      phraseCfg = { ...DEFAULT_PHRASE_CFG };
-      savePhraseCfg(phraseCfg);
+      phraseCfg = JSON.parse(JSON.stringify(DEFAULT_PHRASE_CFG));
       fillPhraseUiFromCfg();
       showToastFor("프리셋 문구 기본값 복원됨", 1200);
+      scheduleCloudSave(); // 다른 수치들처럼 DB에 저장
     });
   }
 
@@ -336,6 +315,8 @@
       },
       bg: { shiftX: bgShiftX, shiftY: bgShiftY },
       textAdjust,
+      // 프리셋 문구(자동 생성) 조합 설정도 DB에 같이 저장
+      phraseCfg,
     };
   }
 
@@ -388,6 +369,20 @@
     if (state.textAdjust && typeof state.textAdjust === "object") {
       Object.keys(textAdjust).forEach((k) => delete textAdjust[k]);
       Object.assign(textAdjust, state.textAdjust);
+    }
+
+    // 프리셋 문구 조합 설정 (DB에서 불러오기)
+    if (state.phraseCfg && typeof state.phraseCfg === "object") {
+      const pc = state.phraseCfg;
+      phraseCfg = {
+        fmt: Array.isArray(pc.fmt) ? pc.fmt : DEFAULT_PHRASE_CFG.fmt,
+        unit: Array.isArray(pc.unit) ? pc.unit : DEFAULT_PHRASE_CFG.unit,
+        part3: Array.isArray(pc.part3) ? pc.part3 : DEFAULT_PHRASE_CFG.part3,
+        part4: Array.isArray(pc.part4) ? pc.part4 : DEFAULT_PHRASE_CFG.part4,
+        part4Prob: clamp(pc.part4Prob, 0, 100),
+      };
+      // UI에도 반영
+      fillPhraseUiFromCfg();
     }
 
     // 미리보기 엔트리 랜덤값 재계산
