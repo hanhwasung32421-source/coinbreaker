@@ -648,7 +648,7 @@
   }
 
   const bgImg = new Image();
-  bgImg.src = "./calcu/bg.png";
+  bgImg.src = "./bg.jpg";
 
   // 미리보기에서는 범위가 바뀌지 않으면 같은 랜덤 값을 유지
   let samplePercent = null; // number
@@ -1769,7 +1769,7 @@
           ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
           ctx.fillStyle = "#fff";
           ctx.font = "14px Roboto, Arial";
-          ctx.fillText("배경 이미지 로드 실패: ./calcu/bg.png", 12, 24);
+          ctx.fillText("배경 이미지 로드 실패: ./bg.jpg", 12, 24);
         },
         { once: true }
       );
