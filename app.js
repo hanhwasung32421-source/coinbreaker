@@ -894,8 +894,32 @@
     const ih = bgImg.naturalHeight || bgImg.height;
     if (!iw || !ih) return;
 
-    // cover(기본) 기준 배율
+    // --- 배경 이미지가 "가로는 맞는데 세로가 부족"한 경우 ---
+    // 사용자가 말한 것처럼 작은 bg를 위아래로 이어붙인(타일) 느낌을 그대로 재현:
+    // 1) 가로를 캔버스 폭에 맞춘 스케일을 기준으로
+    // 2) 세로가 캔버스보다 작으면 repeat-y로 채웁니다.
+    // (기존 cover 크롭 방식은 작은 이미지에서도 확대되어 seam이 안 나지만,
+    //  원본처럼 "이어붙인" 느낌을 원할 때는 repeat-y가 맞습니다.)
     const zoom = getBgZoom();
+    const scaleToWidth = (CANVAS_W / iw) * zoom;
+    const tileDw = Math.max(1, Math.round(iw * scaleToWidth));
+    const tileDh = Math.max(1, Math.round(ih * scaleToWidth));
+    if (tileDh > 0 && tileDh < CANVAS_H) {
+      const dx0 = Math.round((CANVAS_W - tileDw) / 2);
+      const dx = dx0 + getBgShiftX();
+
+      // shiftY는 "패턴 시작점"을 이동시키되, 항상 빈 공간 없이 채워지도록 모듈러로 처리
+      const offY = getBgShiftY();
+      const mod = ((offY % tileDh) + tileDh) % tileDh;
+      let y = -tileDh + mod;
+      while (y < CANVAS_H) {
+        targetCtx.drawImage(bgImg, dx, y, tileDw, tileDh);
+        y += tileDh;
+      }
+      return;
+    }
+
+    // cover(기본) 기준 배율
     const baseScale = Math.max(CANVAS_W / iw, CANVAS_H / ih);
     const scale = baseScale * zoom;
 
@@ -1196,6 +1220,12 @@
     if (!iw || !ih) return { x: 0, y: 0, w: W, h: H };
 
     const zoom = getBgZoom();
+
+    // repeat-y 모드에서는 배경이 항상 캔버스를 꽉 채우므로 전체를 반환
+    const scaleToWidth = (W / iw) * zoom;
+    const tileDh = Math.max(1, Math.round(ih * scaleToWidth));
+    if (tileDh > 0 && tileDh < H) return { x: 0, y: 0, w: W, h: H };
+
     const baseScale = Math.max(W / iw, H / ih);
     const scale = baseScale * zoom;
 
