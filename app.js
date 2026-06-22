@@ -972,6 +972,28 @@
     return textAdjust[id];
   }
 
+  function getEffectiveTextAdjust(id) {
+    const adj = getOrInitAdjust(id);
+    return {
+      dx: Math.round(Number.isFinite(adj.dx) ? adj.dx : 0),
+      dy: Math.round(Number.isFinite(adj.dy) ? adj.dy : 0),
+      size: adj.size,
+      bold: adj.bold,
+    };
+  }
+
+  function syncTextAdjustInputs() {
+    document.querySelectorAll(".text-move-pad").forEach((pad) => {
+      const id = pad.getAttribute("data-text-id");
+      if (!id) return;
+      const adj = getEffectiveTextAdjust(id);
+      const xInput = pad.querySelector(".text-pos-x");
+      const yInput = pad.querySelector(".text-pos-y");
+      if (xInput) xInput.value = String(adj.dx);
+      if (yInput) yInput.value = String(adj.dy);
+    });
+  }
+
   function parseFontSizePx(fontStr, fallback = 16) {
     const m = String(fontStr || "").match(/(\d+(?:\.\d+)?)px/);
     return m ? Number(m[1]) : fallback;
@@ -1188,6 +1210,7 @@
 
   function renderAll() {
     renderPreview();
+    syncTextAdjustInputs();
   }
 
   function setSide(value, { closeModal = true } = {}) {
@@ -1707,6 +1730,7 @@
       lastEntryBase = null;
       rerollIfNeeded(true);
       renderAll();
+      scheduleCloudSave();
       });
 
     const bump = (key, delta) => {
@@ -1734,13 +1758,51 @@
       const id = pad.getAttribute("data-text-id");
       if (!id) return;
 
+      if (!pad.querySelector(".text-pos-grid")) {
+        const posGrid = document.createElement("div");
+        posGrid.className = "text-pos-grid";
+        posGrid.innerHTML = `
+          <label>
+            X 좌표
+            <input class="text-pos-x" type="number" step="1" value="0" />
+          </label>
+          <label>
+            Y 좌표
+            <input class="text-pos-y" type="number" step="1" value="0" />
+          </label>
+        `;
+        pad.appendChild(posGrid);
+      }
+
       const move = (dx, dy) => {
         selectedTextId = id;
         const adj = getOrInitAdjust(id);
         adj.dx += dx;
         adj.dy += dy;
         renderAll();
+        scheduleCloudSave();
       };
+
+      const xInput = pad.querySelector(".text-pos-x");
+      const yInput = pad.querySelector(".text-pos-y");
+      const applyPosInputs = () => {
+        selectedTextId = id;
+        const adj = getOrInitAdjust(id);
+        const nextX = Number(xInput?.value);
+        const nextY = Number(yInput?.value);
+        adj.dx = Number.isFinite(nextX) ? Math.round(nextX) : 0;
+        adj.dy = Number.isFinite(nextY) ? Math.round(nextY) : 0;
+        renderAll();
+        scheduleCloudSave();
+      };
+      if (xInput) {
+        xInput.addEventListener("input", applyPosInputs);
+        xInput.addEventListener("change", applyPosInputs);
+      }
+      if (yInput) {
+        yInput.addEventListener("input", applyPosInputs);
+        yInput.addEventListener("change", applyPosInputs);
+      }
 
       pad.querySelectorAll(".text-move-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -1758,6 +1820,7 @@
           selectedTextId = id;
           delete textAdjust[id];
           renderAll();
+          scheduleCloudSave();
         });
 
       // 글씨 크기 +/- (항목별)
@@ -1771,6 +1834,7 @@
           const cur = adj.size == null ? baseSize : adj.size;
           adj.size = Math.max(1, Math.round(cur + delta));
           renderAll();
+          scheduleCloudSave();
         });
       });
 
@@ -1788,6 +1852,7 @@
           adj.bold = adj.bold === true ? false : true;
           sync();
           renderAll();
+          scheduleCloudSave();
         });
       }
     });

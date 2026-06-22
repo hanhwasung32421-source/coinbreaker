@@ -361,6 +361,25 @@ label.mini{
   justify-content:center;
 }
 
+.text-pos-grid{
+  width:100%;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:8px;
+}
+
+.text-pos-grid label{
+  gap:4px;
+  font-size:11px;
+  color:var(--muted);
+}
+
+.text-pos-grid input{
+  padding:8px 10px;
+  font-size:12px;
+  text-align:center;
+}
+
 .text-bold-btn.active{
   background: rgba(10,191,127,.16);
   border-color: rgba(10,191,127,.45);
