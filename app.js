@@ -16,6 +16,7 @@
   /** @type {HTMLCanvasElement} */
   const canvas = document.getElementById("cardCanvas");
   const ctx = canvas.getContext("2d");
+  let canvasDpr = 1;
   const toastEl = document.getElementById("toast");
   const centerTipEl = document.getElementById("centerTip");
   const croppedPreviewImg = document.getElementById("croppedPreviewImg");
@@ -1095,7 +1096,8 @@
         recordHitbox: recordHitboxes,
       });
 
-      const valueFill = valueId === "stockValue" ? COLORS.green : COLORS.value;
+      // 원본 기준: "DOGE/USDT"는 흰색 계열(value), 포지션(LONG/SHORT)만 색상으로 구분
+      const valueFill = COLORS.value;
       const wVal = drawTextTo(targetCtx, {
         id: valueId,
         name: `${row.label} 값`,
@@ -1336,7 +1338,9 @@
     const hiCtx = hi.getContext("2d");
     hiCtx.imageSmoothingEnabled = true;
     hiCtx.imageSmoothingQuality = "high";
-    hiCtx.drawImage(canvas, crop.x, crop.y, crop.w, crop.h, 0, 0, hi.width, hi.height);
+    // HiDPI 캔버스(미리보기)는 devicePixelRatio로 내부 해상도가 커져있을 수 있어 source 좌표에 dpr을 곱함
+    const dpr = canvasDpr || 1;
+    hiCtx.drawImage(canvas, crop.x * dpr, crop.y * dpr, crop.w * dpr, crop.h * dpr, 0, 0, hi.width, hi.height);
 
     const off = document.createElement("canvas");
     off.width = outW;
@@ -1366,9 +1370,9 @@
         // 캔버스에서 바로 쓰는 weight들을 명시적으로 로드(로컬 @font-face가 있어도 초기엔 미로드일 수 있음)
         if (document.fonts.load) {
           await Promise.allSettled([
-            document.fonts.load(`400 16px ${CARD_FONT_FAMILY}`),
-            document.fonts.load(`500 32px ${CARD_FONT_FAMILY}`),
-            document.fonts.load(`600 34px ${CARD_FONT_FAMILY}`),
+            document.fonts.load('400 16px "Noto Sans KR"'),
+            document.fonts.load('500 32px "Noto Sans KR"'),
+            document.fonts.load('600 34px "Noto Sans KR"'),
           ]);
         }
         await document.fonts.ready;
@@ -1376,6 +1380,22 @@
         // ignore
       }
     }
+  }
+
+  function setupHiDpiCanvas() {
+    if (!canvas || !ctx) return;
+    const dpr = Math.max(1, Math.floor((window.devicePixelRatio || 1) * 1000) / 1000);
+    canvasDpr = dpr;
+    // CSS 크기는 기존 논리 크기 유지
+    canvas.style.width = `${CANVAS_W}px`;
+    canvas.style.height = `${CANVAS_H}px`;
+    // 내부 해상도는 dpr만큼 확장
+    canvas.width = Math.round(CANVAS_W * dpr);
+    canvas.height = Math.round(CANVAS_H * dpr);
+    // 이후 모든 draw는 "논리 좌표(462x354)"로 하도록 스케일 적용
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
   }
 
   function downloadPng() {
@@ -1765,6 +1785,7 @@
     }
     cloudReady = true;
     await ensureFontsReady();
+    setupHiDpiCanvas();
 
     if (bgImg.complete) {
       rerollIfNeeded(true);
