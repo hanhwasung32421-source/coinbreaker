@@ -563,23 +563,46 @@
   let bgShiftX = 0;
   let bgShiftY = 28;
 
-  // ---- 스타일 (사용자 제공 값 반영) ----
+  // ---- 스타일 (첨부 이미지 기준 통일) ----
+  // 아래 매핑은 "캔버스(스크린샷 카드)"에 적용되는 기본 폰트/크기/색상입니다.
+  // 다음에 설정값을 주면 이 블록만 수정하면 바로 전체에 반영되도록 세분화해두었습니다.
+  //
+  // # 1) 수익률(+) + 숫자  : percentNum  (Noto Sans KR Medium, 32px, #49F5B8)
+  // # 2) 수익률(%)         : percentSign (Noto Sans KR Bold,   34px, #49F5B8)
+  // # 3) 수익금(+) + WON   : profit      (Noto Sans KR Regular,20px, #49F5B8)
+  // # 4) 라벨(코인/레버리지/진입가격/종료가격)
+  // # 5) 코인 값(DOGE/USDT): stockValue  (Noto Sans KR Bold,   20px, #49F5B8)
+  // # 6) 포지션(LONG/SHORT): side        (Noto Sans KR Bold,   18px, LONG=#49F5B8 / SHORT=#FA4F4F)
+  // # 7) 값(100x/0.08608..): value       (Noto Sans KR Bold,   18px, #E8E6E3)
   const COLORS = {
-    green: "rgb(10,191,127)",
-    red: "rgb(250,75,75)",
-    // (스크린샷 기준) label은 연한 흰색, value는 거의 흰색
-    label: "rgb(166,166,166)",
-    value: "rgb(255,255,255)",
+    green: "rgb(73,245,184)",
+    red: "rgb(250,79,79)",
+    label: "rgb(176,169,159)",
+    value: "rgb(232,230,227)",
   };
 
-  // 폰트: Roboto
-  const FONT = {
-    percentNum: "500 32px Roboto",
-    percentSign: "500 34px Roboto",
-    profit: "500 20px Roboto",
-    label: "400 16px Roboto",
-    value: "700 18px Roboto",
-    side: "700 18px Roboto",
+  const CARD_FONT_FAMILY = '"Noto Sans KR", system-ui, -apple-system, Segoe UI, Arial, sans-serif';
+
+  // 캔버스 텍스트 ID별 기본 스타일(크기/굵기)
+  const CARD_TEXT_BASE = {
+    // 상단
+    percentNum: { size: 32, weight: 500 },
+    percentSign: { size: 34, weight: 600 },
+    profit: { size: 20, weight: 400 },
+
+    // 섹션
+    stockLabel: { size: 16, weight: 400 },
+    stockValue: { size: 20, weight: 600 },
+    side: { size: 18, weight: 600 },
+
+    leverageLabel: { size: 16, weight: 400 },
+    leverageValue: { size: 18, weight: 600 },
+
+    entryLabel: { size: 16, weight: 400 },
+    entryValue: { size: 18, weight: 600 },
+
+    exitLabel: { size: 16, weight: 400 },
+    exitValue: { size: 18, weight: 600 },
   };
 
   // 좌표 (462x354 캔버스 기준). (제공된 .dg-body 카드 기준)
@@ -929,26 +952,19 @@
     return m ? Number(m[1]) : fallback;
   }
 
-  function fontForTextId(id, baseSizes) {
-    // baseSizes: {percentNum, percentSign, profit, label, value, side}
+  function getBaseStyleForTextId(id) {
+    if (CARD_TEXT_BASE[id]) return CARD_TEXT_BASE[id];
+    if (String(id).endsWith("Label")) return { size: 16, weight: 400 };
+    return { size: 18, weight: 600 };
+  }
+
+  function fontForTextId(id) {
     const adj = getOrInitAdjust(id);
-    const baseW = (() => {
-      if (id === "profit" || id === "percentNum" || id === "percentSign") return 500;
-      if (id.endsWith("Label")) return 400;
-      // values + side
-      return 700;
-    })();
-    const w = adj.bold === true ? 700 : adj.bold === false ? baseW : baseW;
-    const base = (() => {
-      if (id === "percentNum") return baseSizes.percentNum;
-      if (id === "percentSign") return baseSizes.percentSign;
-      if (id === "profit") return baseSizes.profit;
-      if (id.endsWith("Label")) return baseSizes.label;
-      if (id === "side") return baseSizes.side;
-      return baseSizes.value;
-    })();
-    const size = adj.size == null ? base : adj.size;
-    return `${w} ${size}px Roboto`;
+    const baseStyle = getBaseStyleForTextId(id);
+    const baseW = baseStyle.weight;
+    const w = adj.bold === true ? 600 : adj.bold === false ? baseW : baseW;
+    const size = adj.size == null ? baseStyle.size : adj.size;
+    return `${w} ${size}px ${CARD_FONT_FAMILY}`;
   }
 
   function drawTextTo(targetCtx, { id, name, text, x, y, font, fill, recordHitbox }) {
@@ -997,14 +1013,8 @@
     };
   }
 
-  function getBaseSizes() {
-    // 기본 글자 크기는 고정 (UI에서 항목별 +/- 로 조절)
-    return { percentNum: 32, percentSign: 34, profit: 20, label: 16, value: 18, side: 18 };
-  }
-
   function drawCardTo(targetCtx, percentValue, profitValue, { recordHitboxes = false, entryOverride } = {}) {
     const POS2 = getPos();
-    const baseSizes = getBaseSizes();
 
     if (recordHitboxes) lastHitboxes = [];
 
@@ -1026,7 +1036,7 @@
       text: pNum,
       x: x0,
       y: y0,
-      font: fontForTextId("percentNum", baseSizes),
+      font: fontForTextId("percentNum"),
       fill: COLORS.green,
       recordHitbox: recordHitboxes,
     });
@@ -1040,7 +1050,7 @@
         text: pSign,
         x: baseAnchor.percentSign.x,
         y: baseAnchor.percentSign.y,
-        font: fontForTextId("percentSign", baseSizes),
+        font: fontForTextId("percentSign"),
         fill: COLORS.green,
         recordHitbox: recordHitboxes,
       });
@@ -1053,7 +1063,7 @@
       text: t.profitText,
       x: POS2.padX,
       y: POS2.topProfitY,
-      font: fontForTextId("profit", baseSizes),
+      font: fontForTextId("profit"),
       fill: COLORS.green,
       recordHitbox: recordHitboxes,
     });
@@ -1080,19 +1090,20 @@
         text: row.label,
         x: POS2.padX,
         y: labelY,
-        font: fontForTextId(labelId, baseSizes),
+        font: fontForTextId(labelId),
         fill: COLORS.label,
         recordHitbox: recordHitboxes,
       });
 
+      const valueFill = valueId === "stockValue" ? COLORS.green : COLORS.value;
       const wVal = drawTextTo(targetCtx, {
         id: valueId,
         name: `${row.label} 값`,
         text: row.value,
         x: POS2.padX,
         y: valueY,
-        font: fontForTextId(valueId, baseSizes),
-        fill: COLORS.value,
+        font: fontForTextId(valueId),
+        fill: valueFill,
         recordHitbox: recordHitboxes,
       });
 
@@ -1107,7 +1118,7 @@
           text: row.extra,
           x: baseAnchor.side.x,
           y: baseAnchor.side.y,
-          font: fontForTextId("side", baseSizes),
+          font: fontForTextId("side"),
           fill: String(row.extra).toUpperCase() === "SHORT" ? COLORS.red : COLORS.green,
           recordHitbox: recordHitboxes,
         });
@@ -1352,6 +1363,14 @@
     // Roboto 로딩 대기(가능한 경우)
     if (document.fonts && document.fonts.ready) {
       try {
+        // 캔버스에서 바로 쓰는 weight들을 명시적으로 로드(로컬 @font-face가 있어도 초기엔 미로드일 수 있음)
+        if (document.fonts.load) {
+          await Promise.allSettled([
+            document.fonts.load(`400 16px ${CARD_FONT_FAMILY}`),
+            document.fonts.load(`500 32px ${CARD_FONT_FAMILY}`),
+            document.fonts.load(`600 34px ${CARD_FONT_FAMILY}`),
+          ]);
+        }
         await document.fonts.ready;
       } catch {
         // ignore
@@ -1697,9 +1716,7 @@
           selectedTextId = id;
           const dir = btn.getAttribute("data-size");
           const delta = dir === "down" ? -1 : +1;
-          const baseSizes = getBaseSizes();
-          const baseFont = fontForTextId(id, baseSizes);
-          const baseSize = parseFontSizePx(baseFont, 16);
+          const baseSize = getBaseStyleForTextId(id).size;
           const adj = getOrInitAdjust(id);
           const cur = adj.size == null ? baseSize : adj.size;
           adj.size = Math.max(1, Math.round(cur + delta));

@@ -6,10 +6,34 @@
   --accent:#0abf7f;
 }
 
+/* 로컬 폰트 로드 (Noto Sans KR) */
+@font-face{
+  font-family: "Noto Sans KR";
+  src: url("./Noto_Sans_KR/static/NotoSansKR-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face{
+  font-family: "Noto Sans KR";
+  src: url("./Noto_Sans_KR/static/NotoSansKR-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face{
+  font-family: "Noto Sans KR";
+  /* 요구 스펙: Bold를 600으로 사용 */
+  src: url("./Noto_Sans_KR/static/NotoSansKR-Bold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 *{box-sizing:border-box}
 body{
   margin:0;
-  font-family:Roboto, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+  font-family:"Noto Sans KR", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
   background:var(--bg);
   color:var(--text);
 }
