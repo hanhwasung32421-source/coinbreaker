@@ -583,11 +583,15 @@
 
   async function renderCardCanvas() {
     await ensureFontsReady();
+    if (typeof window.html2canvas !== "function") {
+      throw new Error("html2canvas_missing");
+    }
     return window.html2canvas(els.cardRoot, {
       backgroundColor: null,
       scale: Math.max(2, window.devicePixelRatio || 1),
       useCORS: true,
       allowTaint: true,
+      foreignObjectRendering: true,
     });
   }
 
@@ -927,7 +931,14 @@
         } catch (e) {
           console.error(e);
           // copyCardToClipboardAndPreview()에서 실패 시 다운로드로 대체됨
-          showToastFor("클립보드 복사 실패 → 파일로 저장됨(권장: localhost/HTTPS로 실행)", 2500);
+          const msg = String(e?.message || "");
+          if (msg.includes("html2canvas_missing")) {
+            showToastFor("캡처 라이브러리 로딩 실패(html2canvas). 네트워크/차단 여부 확인", 3000);
+          } else if (!window.isSecureContext || location.protocol === "file:") {
+            showToastFor("파일로 열면(또는 비보안 환경) 캡처/복사가 제한될 수 있어요. localhost/HTTPS로 실행 권장", 3500);
+          } else {
+            showToastFor("클립보드 복사 실패 → 파일로 저장됨(권장: localhost/HTTPS로 실행)", 2500);
+          }
         }
       });
     });
@@ -944,6 +955,11 @@
     if (!els.side?.value) setSide(DEFAULTS.side, { shouldSave: false });
     rerollIfNeeded(true);
     renderAll();
+
+    // file:// 로 직접 열면 html2canvas/clipboard 정책 때문에 캡처/복사가 실패할 수 있어 안내
+    if (location.protocol === "file:") {
+      showToastFor("권장: 로컬 서버로 열기(파일로 열면 캡처/복사 제한 가능)", 3500);
+    }
   }
 
   init();
