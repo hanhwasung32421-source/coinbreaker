@@ -349,7 +349,9 @@
     if (fmt === "int") numText = String(Math.floor(absP));
     else if (fmt === "1") numText = (Math.floor(absP * 10) / 10).toFixed(1);
     else numText = (Math.floor(absP * 100) / 100).toFixed(2);
-    if (numText.endsWith(".0")) numText = numText.slice(0, -2);
+    if (numText.includes(".")) {
+      numText = numText.replace(/0+$/, "").replace(/\.$/, "");
+    }
 
     const unit = pickFrom(cfg.unit, "%");
     const part3 = pickFrom(cfg.part3, "감사합니다");
@@ -533,7 +535,10 @@
   }
 
   function renderCard(item) {
-    const percentText = Number(item.percent).toFixed(2).replace(/\.00$/, "");
+    let percentText = Number(item.percent).toFixed(2);
+    if (percentText.includes(".")) {
+      percentText = percentText.replace(/0+$/, "").replace(/\.$/, "");
+    }
     if (els.txtPercent) els.txtPercent.textContent = percentText;
     if (els.txtProfit) els.txtProfit.textContent = formatProfit(item.profit);
     if (els.txtSymbol) els.txtSymbol.textContent = String(els.symbol?.value || "").trim();
