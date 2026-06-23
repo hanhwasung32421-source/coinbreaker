@@ -15,10 +15,10 @@
   --label-to-value:25px;
   --side-gap:0px;
   --percent-sign-top:2px;
-  --green:rgb(73,245,184);
-  --red:rgb(250,79,79);
-  --value:#e8e6e3;
-  --label:#b0a99f;
+  --green:#0ABF7F;
+  --red:#FA4B4B;
+  --value:#FFFFFF;
+  --label:#A6A6A6;
 }
 
 @font-face{
