@@ -2,7 +2,7 @@
 (() => {
   // 빌드 버전(로컬에서 index.html을 바로 열어도 표시되도록 코드에 내장)
   // 수정할 때마다 값을 갱신합니다. 포맷: yyMMddHHmmss
-  const BUILD_VERSION = "260623162559";
+  const BUILD_VERSION = "260623162949";
 
   const SUPABASE_URL = "https://dyfycrmltqosezmsufup.supabase.co";
   const SUPABASE_ANON_KEY =
@@ -586,7 +586,7 @@
     }
   }
 
-  async function renderCardCanvas() {
+  async function renderCardCanvas({ foreignObjectRendering = false } = {}) {
     await ensureFontsReady();
     if (typeof window.html2canvas !== "function") {
       throw new Error("html2canvas_missing");
@@ -600,8 +600,7 @@
       scale: Math.max(2, window.devicePixelRatio || 1),
       useCORS: true,
       allowTaint: true,
-      // foreignObjectRendering은 일부 환경에서 텍스트가 빠지는 사례가 있어 기본값(false)로 둡니다.
-      // 필요 시 copyCardToClipboardAndPreview()에서 재시도 모드로 켤 수 있게 분리합니다.
+      foreignObjectRendering,
     });
   }
 
@@ -730,12 +729,15 @@
     let blob = null;
     let lastErr = null;
 
-    // 1) 일반 모드로 시도
-    // 2) 결과가 "배경만" 같으면 전체 캡쳐로 한 번 더 시도
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // 1) 일반 모드 + 규칙 캡쳐
+    // 2) 일반 모드 + 전체 캡쳐
+    // 3) foreignObjectRendering 모드 + 전체 캡쳐 (환경별 텍스트 누락 대응)
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const canvas = await renderCardCanvas();
-        const crop = attempt === 0 ? computeCaptureRect() : { x: 0, y: 0, w: els.cardRoot.getBoundingClientRect().width, h: els.cardRoot.getBoundingClientRect().height };
+        const useFO = attempt >= 2;
+        const canvas = await renderCardCanvas({ foreignObjectRendering: useFO });
+        const rr = els.cardRoot.getBoundingClientRect();
+        const crop = attempt === 0 ? computeCaptureRect() : { x: 0, y: 0, w: rr.width, h: rr.height };
         const rootRect = els.cardRoot.getBoundingClientRect();
         const scaleX = canvas.width / rootRect.width;
         const scaleY = canvas.height / rootRect.height;
