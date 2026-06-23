@@ -4,8 +4,7 @@
     { "src": "**/*", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/", "dest": "/C_DOM캡처/index.html" },
     { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/C_DOM캡처/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

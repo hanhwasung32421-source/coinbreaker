@@ -20,14 +20,13 @@ jobs:
       - name: Update version.json
         run: |
           BUILD="$(TZ=Asia/Seoul date +'%y%m%d%H%M%S')"
-          echo "{\"build\":\"$BUILD\"}" > "C_DOM캡처/version.json"
-          cat "C_DOM캡처/version.json"
+          echo "{\"build\":\"$BUILD\"}" > "version.json"
+          cat "version.json"
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "C_DOM캡처/version.json"
+          git add "version.json"
           git commit -m "chore: bump build version" || exit 0
           git push
-
