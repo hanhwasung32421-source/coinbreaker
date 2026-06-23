@@ -73,6 +73,7 @@
     txtLeverage: document.getElementById("txtLeverage"),
     txtEntry: document.getElementById("txtEntry"),
     txtExit: document.getElementById("txtExit"),
+    buildVersion: document.getElementById("buildVersion"),
   };
 
   const sideUi = {
@@ -619,9 +620,33 @@
     // 항상 포함되어야 하는 핵심 요소:
     // - 수익 퍼센트(+19.75%)
     // - 수익 금액(+10,229,614 WON)
-    // - 코인 첫 줄(DOGE/USDT + LONG/SHORT) : SHORT이 잘리는 문제 방지
-    const required = getBoxes([".dr2-value", ".dr3-value", ".dgbc-r-prices:first-child .drp-value"]);
-    const all = getBoxes([".dr2-value", ".dr3-value", ".drp-label", ".drp-value"]);
+    // - 코인 첫 줄(DOGE/USDT + LONG/SHORT)
+    //
+    // NOTE: p(.dr2-value/.dr3-value/.drp-value)는 width:100%라 바운딩이 너무 넓게 잡혀
+    //       크롭 로직이 엉뚱하게 동작(가로가 안 줄거나, 특정 구역만 남는 현상)할 수 있어
+    //       실제 글자(span) 기준으로 바운딩을 잡습니다.
+    const required = getBoxes([
+      ".dr2-value .plus-sign",
+      "#txtPercent",
+      ".dr2-value .percent-sign",
+      ".dr3-value .plus-sign",
+      "#txtProfit",
+      "#txtSymbol",
+      "#txtSide",
+    ]);
+    const all = getBoxes([
+      ".dr2-value .plus-sign",
+      "#txtPercent",
+      ".dr2-value .percent-sign",
+      ".dr3-value .plus-sign",
+      "#txtProfit",
+      ".drp-label",
+      "#txtSymbol",
+      "#txtSide",
+      "#txtLeverage",
+      "#txtEntry",
+      "#txtExit",
+    ]);
 
     const boxes = required.length ? required : all;
     if (!boxes.length) return { x: 0, y: 0, w: W, h: H };
@@ -968,6 +993,17 @@
     if (!els.side?.value) setSide(DEFAULTS.side, { shouldSave: false });
     rerollIfNeeded(true);
     renderAll();
+
+    // 빌드 버전(커밋마다 갱신되는 version.json)
+    if (els.buildVersion) {
+      try {
+        const res = await fetch(`./version.json?ts=${Date.now()}`, { cache: "no-store" });
+        const data = await res.json();
+        if (data && data.build) els.buildVersion.textContent = String(data.build);
+      } catch {
+        // ignore
+      }
+    }
 
     // file:// 로 직접 열면 html2canvas/clipboard 정책 때문에 캡처/복사가 실패할 수 있어 안내
     if (location.protocol === "file:") {

@@ -51,6 +51,22 @@ body{
   color:var(--text);
 }
 
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:100;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background:rgba(11,15,23,.9);
+  backdrop-filter: blur(8px);
+}
+.topbar-left{ font-weight:800; font-size:13px; color:rgba(231,238,252,.92); }
+.topbar-right{ font-size:12px; color:rgba(231,238,252,.72); }
+.topbar-right span{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color:rgba(231,238,252,.92); }
+
 .app{
   display:grid;
   grid-template-columns: 520px 600px minmax(340px, 1fr);

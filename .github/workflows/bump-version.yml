@@ -1,0 +1,33 @@
+name: bump-build-version
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Update version.json
+        run: |
+          BUILD="$(TZ=Asia/Seoul date +'%y%m%d%H%M%S')"
+          echo "{\"build\":\"$BUILD\"}" > "C_DOM캡처/version.json"
+          cat "C_DOM캡처/version.json"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "C_DOM캡처/version.json"
+          git commit -m "chore: bump build version" || exit 0
+          git push
+
