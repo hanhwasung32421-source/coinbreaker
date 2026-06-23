@@ -616,11 +616,24 @@
     const padT = randInt(10, 36);
     const padR = randInt(10, 80);
     const padB = randInt(10, 70);
-    const x = Math.max(0, Math.floor(minX - padL));
+
+    // 가로도 50~100% 범위로 크롭되게 하되, 텍스트는 절대 잘리지 않게:
+    // 1) 텍스트 바운딩(패딩 포함)을 먼저 계산
+    // 2) 목표 폭을 W의 50~100%에서 랜덤으로 선택
+    // 3) 목표 폭 안에 텍스트 바운딩이 반드시 포함되도록 x를 랜덤 선택
+    const boundMinX = Math.max(0, Math.floor(minX - padL));
+    const boundMaxX = Math.min(W, Math.ceil(maxX + padR));
+    const boundW = Math.max(1, boundMaxX - boundMinX);
+
+    const targetW = Math.min(W, Math.max(boundW, Math.round(randFloat(0.5, 1.0) * W)));
+    const xMin = Math.max(0, Math.floor(boundMaxX - targetW)); // 오른쪽이 boundMaxX를 포함
+    const xMax = Math.min(Math.floor(boundMinX), W - targetW); // 왼쪽이 boundMinX보다 왼쪽(또는 같음)
+    const x = xMin <= xMax ? randInt(xMin, xMax) : Math.max(0, Math.min(W - targetW, boundMinX));
+
+    // 세로는 기존 방식(패딩 기반) 유지
     const y = Math.max(0, Math.floor(minY - padT));
-    const w = Math.min(W - x, Math.ceil(maxX - minX + padL + padR));
     const h = Math.min(H - y, Math.ceil(maxY - minY + padT + padB));
-    return { x, y, w: Math.max(1, w), h: Math.max(1, h) };
+    return { x, y, w: targetW, h: Math.max(1, h) };
   }
 
   async function copyCardToClipboardAndPreview() {
@@ -628,9 +641,9 @@
     const crop = computeCropRect();
     const scaleX = canvas.width / els.cardRoot.clientWidth;
     const scaleY = canvas.height / els.cardRoot.clientHeight;
-    const outScale = randFloat(0.7, 1.0);
-    const outW = Math.max(1, Math.round(crop.w * outScale));
-    const outH = Math.max(1, Math.round(crop.h * outScale));
+    // 최종 결과 이미지 크기는 크롭 영역 그대로 사용 (가로 50~100% 규칙 유지)
+    const outW = Math.max(1, Math.round(crop.w));
+    const outH = Math.max(1, Math.round(crop.h));
     const off = document.createElement("canvas");
     off.width = outW;
     off.height = outH;
