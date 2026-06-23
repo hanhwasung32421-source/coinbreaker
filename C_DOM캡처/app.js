@@ -641,8 +641,10 @@
   }
 
   function computeCaptureRect() {
-    const W = els.cardRoot.clientWidth;
-    const H = els.cardRoot.clientHeight;
+    // 좌표 계산은 getBoundingClientRect 기반으로 맞춰야 html2canvas 결과 캔버스와 싱크가 잘 맞습니다.
+    const rootRect = els.cardRoot.getBoundingClientRect();
+    const W = rootRect.width;
+    const H = rootRect.height;
     if (Math.random() < 0.05) return { x: 0, y: 0, w: W, h: H };
 
     // 텍스트 실제 글자 기준(폭 100% 요소 제외)
@@ -689,8 +691,9 @@
   async function copyCardToClipboardAndPreview() {
     const canvas = await renderCardCanvas();
     const crop = computeCaptureRect();
-    const scaleX = canvas.width / els.cardRoot.clientWidth;
-    const scaleY = canvas.height / els.cardRoot.clientHeight;
+    const rootRect = els.cardRoot.getBoundingClientRect();
+    const scaleX = canvas.width / rootRect.width;
+    const scaleY = canvas.height / rootRect.height;
     // 최종 결과 이미지 크기는 캡쳐 영역 그대로 사용
     const outW = Math.max(1, Math.round(crop.w));
     const outH = Math.max(1, Math.round(crop.h));
