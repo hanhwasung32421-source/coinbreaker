@@ -596,103 +596,102 @@
     });
   }
 
-  function getBoxes(selectors) {
-    const rootRect = els.cardRoot.getBoundingClientRect();
-    return selectors.flatMap((sel) =>
-      Array.from(els.cardRoot.querySelectorAll(sel)).map((el) => {
-        const r = el.getBoundingClientRect();
-        return {
-          x: r.left - rootRect.left,
-          y: r.top - rootRect.top,
-          w: r.width,
-          h: r.height,
-        };
-      })
-    );
+  // ---- 캡쳐 매커니즘 (새 구현) ----
+  // 요구사항:
+  // - 수익퍼센트/수익금액은 무조건 보이게 캡쳐
+  // - 5% 확률로 수익화면 전체 캡쳐(카드 전체)
+  // - 시작점은 항상 퍼센트 왼쪽 위 기준으로 랜덤한 좌표
+  // - 캡쳐 가로: 카드의 60~100%
+  // - 캡쳐 세로: (수익금액이 나오는 최소 범위) ~ (종료가격 숫자가 보이는 곳까지) 범위에서 랜덤
+  function rectUnion(a, b) {
+    if (!a) return b;
+    if (!b) return a;
+    const x1 = Math.min(a.x, b.x);
+    const y1 = Math.min(a.y, b.y);
+    const x2 = Math.max(a.x + a.w, b.x + b.w);
+    const y2 = Math.max(a.y + a.h, b.y + b.h);
+    return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
   }
 
-  function computeCropRect() {
+  function getRectForSelector(sel) {
+    const rootRect = els.cardRoot.getBoundingClientRect();
+    const el = els.cardRoot.querySelector(sel);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {
+      x: r.left - rootRect.left,
+      y: r.top - rootRect.top,
+      w: r.width,
+      h: r.height,
+    };
+  }
+
+  function getRectForSelectors(selectors) {
+    let u = null;
+    for (const sel of selectors) u = rectUnion(u, getRectForSelector(sel));
+    return u;
+  }
+
+  function clampRectToCard(rect, W, H) {
+    const x = Math.max(0, Math.min(W - 1, Math.floor(rect.x)));
+    const y = Math.max(0, Math.min(H - 1, Math.floor(rect.y)));
+    const w = Math.max(1, Math.min(W - x, Math.ceil(rect.w)));
+    const h = Math.max(1, Math.min(H - y, Math.ceil(rect.h)));
+    return { x, y, w, h };
+  }
+
+  function computeCaptureRect() {
     const W = els.cardRoot.clientWidth;
     const H = els.cardRoot.clientHeight;
-    // 5% 확률로 전체 화면(카드 전체) 크롭
     if (Math.random() < 0.05) return { x: 0, y: 0, w: W, h: H };
 
-    // 항상 포함되어야 하는 핵심 요소:
-    // - 수익 퍼센트(+19.75%)
-    // - 수익 금액(+10,229,614 WON)
-    // - 코인 첫 줄(DOGE/USDT + LONG/SHORT)
-    //
-    // NOTE: p(.dr2-value/.dr3-value/.drp-value)는 width:100%라 바운딩이 너무 넓게 잡혀
-    //       크롭 로직이 엉뚱하게 동작(가로가 안 줄거나, 특정 구역만 남는 현상)할 수 있어
-    //       실제 글자(span) 기준으로 바운딩을 잡습니다.
-    const required = getBoxes([
-      ".dr2-value .plus-sign",
-      "#txtPercent",
-      ".dr2-value .percent-sign",
-      ".dr3-value .plus-sign",
-      "#txtProfit",
-      "#txtSymbol",
-      "#txtSide",
-    ]);
-    const all = getBoxes([
-      ".dr2-value .plus-sign",
-      "#txtPercent",
-      ".dr2-value .percent-sign",
-      ".dr3-value .plus-sign",
-      "#txtProfit",
-      ".drp-label",
-      "#txtSymbol",
-      "#txtSide",
-      "#txtLeverage",
-      "#txtEntry",
-      "#txtExit",
-    ]);
+    // 텍스트 실제 글자 기준(폭 100% 요소 제외)
+    const percentRect =
+      getRectForSelectors([".dr2-value .plus-sign", "#txtPercent", ".dr2-value .percent-sign"]) || {
+        x: 0,
+        y: 0,
+        w: 1,
+        h: 1,
+      };
+    const profitRect = getRectForSelectors([".dr3-value .plus-sign", "#txtProfit"]) || percentRect;
+    const exitRect = getRectForSelector("#txtExit") || profitRect;
 
-    const boxes = required.length ? required : all;
-    if (!boxes.length) return { x: 0, y: 0, w: W, h: H };
+    // 시작점: 퍼센트 왼쪽 위 기준으로 랜덤
+    const startPadX = randInt(0, 28);
+    const startPadY = randInt(0, 18);
+    let x = Math.max(0, Math.floor(percentRect.x - startPadX));
+    let y = Math.max(0, Math.floor(percentRect.y - startPadY));
 
-    // 가끔은 더 넓게(전체 데이터 포함) 잡기
-    const mode = Math.random();
-    const wanted = mode < 0.20 ? all : boxes;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    wanted.forEach((b) => {
-      minX = Math.min(minX, b.x);
-      minY = Math.min(minY, b.y);
-      maxX = Math.max(maxX, b.x + b.w);
-      maxY = Math.max(maxY, b.y + b.h);
-    });
-    const padL = randInt(10, 50);
-    const padT = randInt(10, 36);
-    const padR = randInt(10, 80);
-    const padB = randInt(10, 70);
+    // 가로: 60~100% 랜덤, 단 텍스트(퍼센트+수익금)는 절대 잘리면 안 됨
+    const requiredRight = Math.ceil(Math.max(percentRect.x + percentRect.w, profitRect.x + profitRect.w));
+    let w = Math.round(randFloat(0.6, 1.0) * W);
+    w = Math.max(1, Math.min(W - x, w));
+    if (x + w < requiredRight) w = Math.min(W - x, requiredRight - x);
 
-    // 가로도 50~100% 범위로 크롭되게 하되, 텍스트는 절대 잘리지 않게:
-    // 1) 텍스트 바운딩(패딩 포함)을 먼저 계산
-    // 2) 목표 폭을 W의 50~100%에서 랜덤으로 선택
-    // 3) 목표 폭 안에 텍스트 바운딩이 반드시 포함되도록 x를 랜덤 선택
-    const boundMinX = Math.max(0, Math.floor(minX - padL));
-    const boundMaxX = Math.min(W, Math.ceil(maxX + padR));
-    const boundW = Math.max(1, boundMaxX - boundMinX);
+    // 세로: 최소는 "수익금액이 보이는 최소 범위"(profit bottom 포함),
+    // 최대는 "종료가격 숫자가 보이는 곳까지"(exit bottom 포함)
+    const padBottom = randInt(12, 36);
+    const minH = Math.ceil(profitRect.y + profitRect.h + padBottom) - y;
+    const maxH = Math.ceil(exitRect.y + exitRect.h + padBottom) - y;
+    const lo = Math.max(1, Math.min(H - y, Math.min(minH, maxH)));
+    const hi = Math.max(lo, Math.min(H - y, Math.max(minH, maxH)));
+    const h = randInt(lo, hi);
 
-    const targetW = Math.min(W, Math.max(boundW, Math.round(randFloat(0.5, 1.0) * W)));
-    const xMin = Math.max(0, Math.floor(boundMaxX - targetW)); // 오른쪽이 boundMaxX를 포함
-    const xMax = Math.min(Math.floor(boundMinX), W - targetW); // 왼쪽이 boundMinX보다 왼쪽(또는 같음)
-    const x = xMin <= xMax ? randInt(xMin, xMax) : Math.max(0, Math.min(W - targetW, boundMinX));
-
-    // 세로는 패딩 기반이지만, required(상단) 영역이 반드시 포함되도록 보정
-    const boundMinY = Math.max(0, Math.floor(minY - padT));
-    const boundMaxY = Math.min(H, Math.ceil(maxY + padB));
-    const y = Math.max(0, Math.min(boundMinY, H - 1));
-    const h = Math.min(H - y, Math.max(1, boundMaxY - y));
-    return { x, y, w: targetW, h: Math.max(1, h) };
+    // 안전: 필수 요소가 잘리지 않도록 최종 보정
+    const requiredBottom = Math.ceil(profitRect.y + profitRect.h);
+    if (y + h < requiredBottom) {
+      const need = requiredBottom - y;
+      return clampRectToCard({ x, y, w, h: need + randInt(8, 28) }, W, H);
+    }
+    return clampRectToCard({ x, y, w, h }, W, H);
   }
 
   async function copyCardToClipboardAndPreview() {
     const canvas = await renderCardCanvas();
-    const crop = computeCropRect();
+    const crop = computeCaptureRect();
     const scaleX = canvas.width / els.cardRoot.clientWidth;
     const scaleY = canvas.height / els.cardRoot.clientHeight;
-    // 최종 결과 이미지 크기는 크롭 영역 그대로 사용 (가로 50~100% 규칙 유지)
+    // 최종 결과 이미지 크기는 캡쳐 영역 그대로 사용
     const outW = Math.max(1, Math.round(crop.w));
     const outH = Math.max(1, Math.round(crop.h));
     const off = document.createElement("canvas");
