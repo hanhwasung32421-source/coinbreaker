@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>B 비교용 - 원본 구조 복제</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <aside class="panel">
+        <h1>B 비교용</h1>
+        <p class="desc">
+          기존 A는 건드리지 않고, 원본 `.dg-body` 구조를 그대로 따라 그리는 B 버전입니다.
+          수치를 바꿔보면서 원본 느낌과 얼마나 가까운지 비교할 수 있습니다.
+        </p>
+
+        <div class="grid">
+          <label>
+            수익률
+            <input id="inpPercent" type="text" value="19.75" />
+          </label>
+
+          <label>
+            수익금(WON)
+            <input id="inpProfit" type="text" value="10,229,614" />
+          </label>
+
+          <label>
+            코인
+            <input id="inpSymbol" type="text" value="DOGE/USDT" />
+          </label>
+
+          <label>
+            레버리지
+            <input id="inpLeverage" type="text" value="100x" />
+          </label>
+
+          <label>
+            진입가격
+            <input id="inpEntry" type="text" value="0.08608" />
+          </label>
+
+          <label>
+            종료가격
+            <input id="inpExit" type="text" value="0.08591" />
+          </label>
+        </div>
+
+        <div class="toggle-wrap">
+          <div class="toggle-title">포지션</div>
+          <div class="side-toggle" role="group" aria-label="포지션 선택">
+            <button id="btnLong" class="secondary" type="button">LONG</button>
+            <button id="btnShort" class="secondary active" type="button">SHORT</button>
+          </div>
+        </div>
+
+        <details class="notes" open>
+          <summary>이 B 방식 특징</summary>
+          <ul>
+            <li>원본 HTML 구조와 클래스 이름을 최대한 그대로 사용</li>
+            <li>배경은 `../bg.jpg`를 폭 기준으로 맞추고 세로는 반복(repeat-y) 처리</li>
+            <li>폰트는 로컬 `Noto Sans KR` 파일을 직접 로드</li>
+            <li>기존 A와 별개로 비교만 하기 위한 별도 폴더</li>
+          </ul>
+        </details>
+      </aside>
+
+      <main class="preview-area">
+        <div class="dialog-shell">
+          <div class="dialog-mock">
+            <div class="el-dialog">
+              <div class="el-dialog__header">
+                <span class="el-dialog__title"></span>
+                <button type="button" aria-label="Close" class="el-dialog__headerbtn">×</button>
+              </div>
+              <div class="el-dialog__body">
+                <div class="dg-body cursor-pointer" id="cardRoot">
+                  <div class="dgb-content">
+                    <div class="dgbc-r-2">
+                      <p class="dr2-value">
+                        <span class="plus-sign">+</span><span id="txtPercent">19.75</span><span class="percent-sign">%</span>
+                      </p>
+                      <p class="dr3-value">
+                        <span class="plus-sign">+</span><span id="txtProfit">10,229,614 WON</span>
+                      </p>
+                    </div>
+
+                    <div class="dgbcr_r_price_area">
+                      <div class="dgbc-r-prices">
+                        <p class="drp-label">코인</p>
+                        <p class="drp-value">
+                          <span id="txtSymbol">DOGE/USDT</span>
+                          <span id="txtSide" class="dr1-tt SHORT">SHORT</span>
+                        </p>
+                      </div>
+
+                      <div class="dgbc-r-prices">
+                        <p class="drp-label">레버리지</p>
+                        <p id="txtLeverage" class="drp-value">100x</p>
+                      </div>
+
+                      <div class="dgbc-r-prices">
+                        <p class="drp-label">진입가격</p>
+                        <p id="txtEntry" class="drp-value">0.08608</p>
+                      </div>
+
+                      <div class="dgbc-r-prices">
+                        <p class="drp-label">종료가격</p>
+                        <p id="txtExit" class="drp-value">0.08591</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

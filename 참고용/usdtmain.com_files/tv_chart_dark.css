@@ -1,0 +1,70 @@
+:root {
+  --tv-color-pane-background: #0E1B1F;
+  --tv-color-platform-background: #0E1B1F;
+  --tv-color-toolbar-button-background-hover: #0E1B1F;
+  --tv-color-toolbar-button-text: #758696;
+  --tv-color-toolbar-button-text-hover: #fff;
+  --tv-color-toolbar-button-text-active-hover: #fff;
+  --tv-color-pane-background-secondary: #0E1B1F;
+  --tv-color-toolbar-button-background-secondary-hover: #758696;
+  --tv-color-toolbar-button-background-expanded: #0E1B1F;
+  --tv-color-toolbar-button-text-active: #52D2C2;
+  --tv-color-item-active-text: #52D2C2;
+  --tv-color-toolbar-toggle-button-background-active: #758696;
+  --tv-color-toolbar-toggle-button-background-active-hover: #758696;
+  --tv-color-border: 1px solid #232429;
+}
+
+.tv-favorited-drawings-toolbar__widget.i-active {
+  color: #52D2C2
+}
+
+.chart-markup-table.price-axis-container .common-tooltip-html svg {
+  display: none;
+}
+
+.pane-legend-line__wrap-description.apply-overflow-tooltip.main {
+  display: none !important;
+}
+
+.chart-page .chart-container {
+  border:1px solid #232429;
+}
+
+.layout__area--left > div,
+.header-chart-panel > div,
+.chart-controls-bar,
+.apply-common-tooltip {
+  background-color: #0E1B1F !important;
+  border: none !important;
+}
+
+.intervals-container .apply-common-tooltip:last-child {
+  display: none;
+}
+
+.header-chart-panel .top {
+  display: none;
+}
+
+.header-group-properties {
+  display: none !important;
+}
+
+.header-chart-panel .button.fullscreen svg {
+  fill: #fff;
+}
+
+.header-chart-panel .button {
+  background-color: inherit;
+  border: 0;
+}
+
+.header-chart-panel .button.fullscreen {
+  position: absolute;
+  right: 10px;
+}
+
+.header-chart-panel .group.header-group-screenshot {
+  display: none;
+}
