@@ -1,5 +1,9 @@
 /* eslint-disable no-alert */
 (() => {
+  // 빌드 버전(로컬에서 index.html을 바로 열어도 표시되도록 코드에 내장)
+  // 수정할 때마다 값을 갱신합니다. 포맷: yyMMddHHmmss
+  const BUILD_VERSION = "260623162559";
+
   const SUPABASE_URL = "https://dyfycrmltqosezmsufup.supabase.co";
   const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5Znljcm1sdHFvc2V6bXN1ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMzg4MDIsImV4cCI6MjA5NTYxNDgwMn0.VpJCBdD1g8YZiaa6Zah9ZKIu3ydu_RkSgWCdEXe2QGw";
@@ -587,12 +591,17 @@
     if (typeof window.html2canvas !== "function") {
       throw new Error("html2canvas_missing");
     }
+
+    // DOM 업데이트가 반영될 시간을 조금 줌(프리셋 클릭 직후 텍스트가 캔버스에 누락되는 케이스 완화)
+    await new Promise((r) => requestAnimationFrame(() => r()));
+
     return window.html2canvas(els.cardRoot, {
       backgroundColor: null,
       scale: Math.max(2, window.devicePixelRatio || 1),
       useCORS: true,
       allowTaint: true,
-      foreignObjectRendering: true,
+      // foreignObjectRendering은 일부 환경에서 텍스트가 빠지는 사례가 있어 기본값(false)로 둡니다.
+      // 필요 시 copyCardToClipboardAndPreview()에서 재시도 모드로 켤 수 있게 분리합니다.
     });
   }
 
@@ -695,42 +704,84 @@
     return clampRectToCard({ x, y, w, h }, W, H);
   }
 
-  async function copyCardToClipboardAndPreview() {
-    const canvas = await renderCardCanvas();
-    const crop = computeCaptureRect();
-    const rootRect = els.cardRoot.getBoundingClientRect();
-    const scaleX = canvas.width / rootRect.width;
-    const scaleY = canvas.height / rootRect.height;
-    // 최종 결과 이미지 크기는 캡쳐 영역 그대로 사용
-    const outW = Math.max(1, Math.round(crop.w));
-    const outH = Math.max(1, Math.round(crop.h));
-    const off = document.createElement("canvas");
-    off.width = outW;
-    off.height = outH;
-    const offCtx = off.getContext("2d");
-    offCtx.imageSmoothingEnabled = true;
-    offCtx.imageSmoothingQuality = "high";
-    offCtx.drawImage(
-      canvas,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.w * scaleX,
-      crop.h * scaleY,
-      0,
-      0,
-      outW,
-      outH
-    );
-    const blob = await new Promise((resolve, reject) =>
-      off.toBlob((b) => (b ? resolve(b) : reject(new Error("이미지 변환 실패"))), "image/png")
-    );
+  function hasGreenishText(canvasOrCtx) {
+    const canvas = canvasOrCtx instanceof CanvasRenderingContext2D ? canvasOrCtx.canvas : canvasOrCtx;
+    const ctx = canvasOrCtx instanceof CanvasRenderingContext2D ? canvasOrCtx : canvas.getContext("2d");
+    if (!ctx) return true;
+    const w = canvas.width, h = canvas.height;
+    if (!w || !h) return true;
+    // 텍스트(초록색/흰색)가 전혀 없는 "배경만" 캡쳐를 걸러내기 위한 휴리스틱
+    // 랜덤 샘플 픽셀에서 초록색 계열(수익 텍스트) 또는 밝은 픽셀이 있으면 정상으로 간주
+    const img = ctx.getImageData(0, 0, w, h).data;
+    const samples = 260;
+    for (let i = 0; i < samples; i++) {
+      const x = Math.floor(Math.random() * w);
+      const y = Math.floor(Math.random() * h);
+      const idx = (y * w + x) * 4;
+      const r = img[idx], g = img[idx + 1], b = img[idx + 2];
+      const bright = (r + g + b) / 3;
+      const greenish = g > 160 && g - r > 40 && g - b > 20;
+      if (greenish || bright > 210) return true;
+    }
+    return false;
+  }
 
-    // 미리보기는 항상 갱신
+  async function copyCardToClipboardAndPreview() {
+    let blob = null;
+    let lastErr = null;
+
+    // 1) 일반 모드로 시도
+    // 2) 결과가 "배경만" 같으면 전체 캡쳐로 한 번 더 시도
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const canvas = await renderCardCanvas();
+        const crop = attempt === 0 ? computeCaptureRect() : { x: 0, y: 0, w: els.cardRoot.getBoundingClientRect().width, h: els.cardRoot.getBoundingClientRect().height };
+        const rootRect = els.cardRoot.getBoundingClientRect();
+        const scaleX = canvas.width / rootRect.width;
+        const scaleY = canvas.height / rootRect.height;
+
+        const outW = Math.max(1, Math.round(crop.w));
+        const outH = Math.max(1, Math.round(crop.h));
+        const off = document.createElement("canvas");
+        off.width = outW;
+        off.height = outH;
+        const offCtx = off.getContext("2d");
+        offCtx.imageSmoothingEnabled = true;
+        offCtx.imageSmoothingQuality = "high";
+        offCtx.drawImage(
+          canvas,
+          crop.x * scaleX,
+          crop.y * scaleY,
+          crop.w * scaleX,
+          crop.h * scaleY,
+          0,
+          0,
+          outW,
+          outH
+        );
+
+        // "배경만" 캡쳐면 재시도
+        if (!hasGreenishText(offCtx)) {
+          lastErr = new Error("capture_background_only");
+          continue;
+        }
+
+        blob = await new Promise((resolve, reject) =>
+          off.toBlob((b) => (b ? resolve(b) : reject(new Error("이미지 변환 실패"))), "image/png")
+        );
+        break;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (!blob) throw lastErr || new Error("capture_failed");
+    const blob = await new Promise((resolve, reject) =>
     if (els.croppedPreviewImg) {
       if (lastCroppedPreviewUrl) URL.revokeObjectURL(lastCroppedPreviewUrl);
       lastCroppedPreviewUrl = URL.createObjectURL(blob);
       els.croppedPreviewImg.src = lastCroppedPreviewUrl;
     }
+
 
     // 클립보드 복사는 브라우저 보안 정책(HTTPS/localhost)에서만 동작할 수 있음.
     // 실패하면 다운로드로 대체해 "복사 불가" 상황에서도 결과는 얻을 수 있게 함.
@@ -1005,7 +1056,10 @@
 
     // 빌드 버전(커밋마다 갱신되는 version.json)
     if (els.buildVersion) {
+      // file:// 로 열어도 무조건 표시되도록 우선 내장 버전을 표시
+      els.buildVersion.textContent = BUILD_VERSION;
       try {
+        // file:// 환경에서는 fetch가 실패할 수 있어, 성공할 때만 덮어씁니다.
         const res = await fetch(`./version.json?ts=${Date.now()}`, { cache: "no-store" });
         const data = await res.json();
         if (data && data.build) els.buildVersion.textContent = String(data.build);
