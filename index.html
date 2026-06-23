@@ -229,6 +229,31 @@ button.secondary{ background:#0c1220; }
   .controls{ width:100%; min-width:0; max-width:none; }
 }
 
+.warning-notice {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  margin-top: 14px;
+  margin-bottom: 14px;
+  letter-spacing: -0.5px;
+}
+.warn-long {
+  color: #38bdf8;
+}
+.warn-short {
+  color: #FA4B4B;
+}
+.warn-text {
+  color: #FFFFFF;
+}
+@keyframes flash-3 {
+  0%, 33.3%, 66.6%, 100% { opacity: 1; }
+  16.6%, 50%, 83.3% { opacity: 0; }
+}
+.flash-warning {
+  animation: flash-3 1.5s ease-in-out;
+}
+
 </style>
   </head>
   <body>
@@ -288,7 +313,10 @@ button.secondary{ background:#0c1220; }
         <div class="hint">복사가 안 되면 브라우저 보안 정책 때문일 수 있어요. 권장: 로컬 서버로 열기(예: <code>python -m http.server 8000 --directory c:\trae</code>)</div>
         <div class="generate-wrap">
           <button id="btnGenerate" class="primary" type="button">생성</button>
-          <div class="generate-hint">오른쪽에서 “생성 개수”를 입력한 뒤 생성 버튼을 누르세요.</div>
+          <div id="warningNotice" class="warning-notice">
+            <span class="warn-long">LONG</span> / <span class="warn-short">SHORT</span> <span class="warn-text">확인요망</span>
+          </div>
+          <div class="generate-hint">생성 버튼을 누르세요.</div>
         </div>
       </div>
 

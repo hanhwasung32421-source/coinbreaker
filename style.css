@@ -221,3 +221,28 @@ button.secondary{ background:#0c1220; }
   .app{ grid-template-columns:1fr; }
   .controls{ width:100%; min-width:0; max-width:none; }
 }
+
+.warning-notice {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  margin-top: 14px;
+  margin-bottom: 14px;
+  letter-spacing: -0.5px;
+}
+.warn-long {
+  color: #38bdf8;
+}
+.warn-short {
+  color: #FA4B4B;
+}
+.warn-text {
+  color: #FFFFFF;
+}
+@keyframes flash-3 {
+  0%, 33.3%, 66.6%, 100% { opacity: 1; }
+  16.6%, 50%, 83.3% { opacity: 0; }
+}
+.flash-warning {
+  animation: flash-3 1.5s ease-in-out;
+}

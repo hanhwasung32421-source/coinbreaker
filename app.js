@@ -901,7 +901,16 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
 
+  function triggerWarningFlash() {
+    const el = document.getElementById("warningNotice");
+    if (!el) return;
+    el.classList.remove("flash-warning");
+    void el.offsetWidth;
+    el.classList.add("flash-warning");
+  }
+
   function doGenerate() {
+    triggerWarningFlash();
     const n = getCount();
     const baseEntry = String(els.entry?.value || "").trim();
     generatedItems = Array.from({ length: n }, () => {
@@ -1112,6 +1121,7 @@
     if (!els.side?.value) setSide(DEFAULTS.side, { shouldSave: false });
     rerollIfNeeded(true);
     renderAll();
+    triggerWarningFlash();
 
     // 빌드 버전(커밋마다 갱신되는 version.json)
     if (els.buildVersion) {
