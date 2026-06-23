@@ -2,7 +2,7 @@
 (() => {
   // 빌드 버전(로컬에서 index.html을 바로 열어도 표시되도록 코드에 내장)
   // 수정할 때마다 값을 갱신합니다. 포맷: yyMMddHHmmss
-  const BUILD_VERSION = "260623163600";
+  const BUILD_VERSION = "260623164458";
 
   const SUPABASE_URL = "https://dyfycrmltqosezmsufup.supabase.co";
   const SUPABASE_ANON_KEY =
@@ -703,6 +703,57 @@
     return clampRectToCard({ x, y, w, h }, W, H);
   }
 
+  function hasProfitTextLikePixels(offCtx, cropCss) {
+    // required 영역(퍼센트+수익금) 안에서
+    // - 밝은/초록 픽셀(텍스트)도 있어야 하고
+    // - 어두운 픽셀(배경)도 같이 있어야 정상으로 간주합니다.
+    // (첨부처럼 "초록색 덩어리만" 나오거나 "배경만" 나오는 케이스를 걸러냄)
+    const rr = els.cardRoot.getBoundingClientRect();
+
+    const percentRect =
+      getRectForSelectors([".dr2-value .plus-sign", "#txtPercent", ".dr2-value .percent-sign"]) ||
+      getRectForSelector(".dr2-value") ||
+      { x: 0, y: 0, w: 1, h: 1 };
+    const profitRect =
+      getRectForSelectors([".dr3-value .plus-sign", "#txtProfit"]) ||
+      getRectForSelector(".dr3-value") ||
+      percentRect;
+    const requiredRect = rectUnion(percentRect, profitRect);
+
+    // offCtx는 crop된 이미지(1 CSS px = 1 off canvas px) 이므로,
+    // requiredRect를 crop 기준으로 로컬 좌표로 변환해서 샘플링합니다.
+    const sx = Math.max(0, Math.floor(requiredRect.x - cropCss.x));
+    const sy = Math.max(0, Math.floor(requiredRect.y - cropCss.y));
+    const ex = Math.min(offCtx.canvas.width, Math.ceil(requiredRect.x + requiredRect.w - cropCss.x));
+    const ey = Math.min(offCtx.canvas.height, Math.ceil(requiredRect.y + requiredRect.h - cropCss.y));
+    const w = Math.max(1, ex - sx);
+    const h = Math.max(1, ey - sy);
+
+    const img = offCtx.getImageData(sx, sy, w, h).data;
+    const samples = 420;
+    let darkCnt = 0;
+    let brightOrGreenCnt = 0;
+
+    for (let i = 0; i < samples; i++) {
+      const x = Math.floor(Math.random() * w);
+      const y = Math.floor(Math.random() * h);
+      const idx = (y * w + x) * 4;
+      const r = img[idx], g = img[idx + 1], b = img[idx + 2];
+      const bright = (r + g + b) / 3;
+      const darkish = bright < 45;
+      const brightish = bright > 185;
+      const greenish = g > 150 && g - r > 35 && g - b > 20;
+
+      if (darkish) darkCnt++;
+      if (brightish || greenish) brightOrGreenCnt++;
+      if (darkCnt > 12 && brightOrGreenCnt > 12) return true;
+    }
+
+    // rr unused but kept to ensure rects are computed after layout
+    void rr;
+    return darkCnt > 12 && brightOrGreenCnt > 12;
+  }
+
   function hasGreenishText(canvasOrCtx) {
     const canvas = canvasOrCtx instanceof CanvasRenderingContext2D ? canvasOrCtx.canvas : canvasOrCtx;
     const ctx = canvasOrCtx instanceof CanvasRenderingContext2D ? canvasOrCtx : canvas.getContext("2d");
@@ -762,8 +813,9 @@
           outH
         );
 
-        // "배경만" 캡쳐면 재시도
-        if (!hasGreenishText(offCtx)) {
+        // required(퍼센트+수익금) 영역에 "텍스트 + 배경"이 같이 있는지 검사
+        // 실패하면 재시도(환경별 텍스트 누락/좌표 미스 대비)
+        if (!hasProfitTextLikePixels(offCtx, crop)) {
           lastErr = new Error("capture_background_only");
           continue;
         }
