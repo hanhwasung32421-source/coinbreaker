@@ -400,8 +400,17 @@
     setVal(els.count, s.count);
     setVal(els.prefix, s.prefix);
     if (state.bg) {
-      if (typeof state.bg.shiftX === "number") bgShiftX = state.bg.shiftX;
-      if (typeof state.bg.shiftY === "number") bgShiftY = state.bg.shiftY;
+      // 과거 저장값(0,0)이 들어있는 경우 배경이 중앙 기준으로 어색하게 보일 수 있어
+      // C에서는 기본 원본 느낌(0,28)을 기준으로 두고, (0,0)은 "미설정"으로 취급합니다.
+      const sx = typeof state.bg.shiftX === "number" ? state.bg.shiftX : bgShiftX;
+      const sy = typeof state.bg.shiftY === "number" ? state.bg.shiftY : bgShiftY;
+      if (sx === 0 && sy === 0) {
+        bgShiftX = 0;
+        bgShiftY = 28;
+      } else {
+        bgShiftX = sx;
+        bgShiftY = sy;
+      }
     }
     if (state.phraseCfg && typeof state.phraseCfg === "object") {
       const pc = state.phraseCfg;
@@ -484,8 +493,8 @@
     const sizeZoom = Math.max(1, z);
     els.cardRoot.style.backgroundRepeat = "repeat-y";
     els.cardRoot.style.backgroundSize = `${(sizeZoom * 100).toFixed(3)}% auto`;
-    // 중심 기준으로 X 이동(원본 느낌)
-    els.cardRoot.style.backgroundPosition = `calc(50% + ${Math.round(bgShiftX)}px) ${Math.round(bgShiftY)}px`;
+    // C의 배경 X/Y는 "좌상단 기준(px)"으로 해석 (0,0이면 왼쪽 위에 맞춰짐)
+    els.cardRoot.style.backgroundPosition = `${Math.round(bgShiftX)}px ${Math.round(bgShiftY)}px`;
   }
 
   function setSide(value, { shouldSave = true } = {}) {
