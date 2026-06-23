@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>C DOM 캡처 방식</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="preview">
+        <div class="card-shell">
+          <div class="el-dialog">
+            <div class="el-dialog__header">
+              <span class="el-dialog__title"></span>
+            </div>
+            <div class="el-dialog__body">
+              <div class="dg-body cursor-pointer" id="cardRoot">
+                <div class="dgb-content">
+                  <div class="dgbc-r-2">
+                    <p class="dr2-value">
+                      <span class="plus-sign">+</span><span id="txtPercent">19.75</span><span class="percent-sign">%</span>
+                    </p>
+                    <p class="dr3-value">
+                      <span class="plus-sign">+</span><span id="txtProfit">10,229,614 WON</span>
+                    </p>
+                  </div>
+
+                  <div class="dgbcr_r_price_area">
+                    <div class="dgbc-r-prices">
+                      <p class="drp-label">코인</p>
+                      <p class="drp-value">
+                        <span id="txtSymbol">DOGE/USDT</span>
+                        <span id="txtSide" class="dr1-tt SHORT">SHORT</span>
+                      </p>
+                    </div>
+
+                    <div class="dgbc-r-prices">
+                      <p class="drp-label">레버리지</p>
+                      <p id="txtLeverage" class="drp-value">100x</p>
+                    </div>
+
+                    <div class="dgbc-r-prices">
+                      <p class="drp-label">진입가격</p>
+                      <p id="txtEntry" class="drp-value">0.08608</p>
+                    </div>
+
+                    <div class="dgbc-r-prices">
+                      <p class="drp-label">종료가격</p>
+                      <p id="txtExit" class="drp-value">0.08591</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hint">C는 DOM 기반 렌더링 후 캡처하는 방식입니다. A/B는 그대로 유지됩니다.</div>
+        <div class="hint">복사가 안 되면 브라우저 보안 정책 때문일 수 있어요. 권장: 로컬 서버로 열기(예: <code>python -m http.server 8000 --directory c:\trae</code>)</div>
+        <div class="generate-wrap">
+          <button id="btnGenerate" class="primary" type="button">생성</button>
+          <div class="generate-hint">오른쪽에서 “생성 개수”를 입력한 뒤 생성 버튼을 누르세요.</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="preset-wrap">
+          <div class="preset-title">프리셋(수익금 만원 범위)</div>
+          <div class="preset-grid">
+            <button class="secondary preset-btn" type="button" data-preset="1" data-pmin="50" data-pmax="100">프리셋1</button>
+            <button class="secondary preset-btn" type="button" data-preset="2" data-pmin="100" data-pmax="200">프리셋2</button>
+            <button class="secondary preset-btn" type="button" data-preset="3" data-pmin="300" data-pmax="400">프리셋3</button>
+            <button class="secondary preset-btn" type="button" data-preset="4" data-pmin="300" data-pmax="400">프리셋4</button>
+            <button class="secondary preset-btn" type="button" data-preset="5" data-pmin="500" data-pmax="700">프리셋5</button>
+
+            <div class="preset-caption" data-preset="1"></div>
+            <div class="preset-caption" data-preset="2"></div>
+            <div class="preset-caption" data-preset="3"></div>
+            <div class="preset-caption" data-preset="4"></div>
+            <div class="preset-caption" data-preset="5"></div>
+
+            <button class="secondary preset-btn" type="button" data-preset="6" data-pmin="1000" data-pmax="2000">프리셋6</button>
+            <button class="secondary preset-btn" type="button" data-preset="7" data-pmin="1500" data-pmax="2500">프리셋7</button>
+            <button class="secondary preset-btn" type="button" data-preset="8" data-pmin="2500" data-pmax="3500">프리셋8</button>
+            <button class="secondary preset-btn" type="button" data-preset="9" data-pmin="3500" data-pmax="4500">프리셋9</button>
+            <button class="secondary preset-btn" type="button" data-preset="10" data-pmin="5000" data-pmax="6000">프리셋10</button>
+
+            <div class="preset-caption" data-preset="6"></div>
+            <div class="preset-caption" data-preset="7"></div>
+            <div class="preset-caption" data-preset="8"></div>
+            <div class="preset-caption" data-preset="9"></div>
+            <div class="preset-caption" data-preset="10"></div>
+          </div>
+
+          <details class="phrase-settings">
+            <summary>프리셋 문구(자동 생성) 조합 설정</summary>
+            <div class="phrase-help">
+              프리셋을 누르면 아래 규칙으로 문구가 자동 생성됩니다. 원하는대로 조합을 수정하면 자동 저장됩니다.
+            </div>
+            <div class="phrase-grid">
+              <label class="span-2">1) 수익률 숫자 포맷
+                <textarea id="inpPhraseFmt" rows="3" spellcheck="false"></textarea>
+              </label>
+              <label class="span-2">2) 단위
+                <textarea id="inpPhraseUnit" rows="3" spellcheck="false"></textarea>
+              </label>
+              <label class="span-2">3) 기본 마무리 문구
+                <textarea id="inpPhrasePart3" rows="4" spellcheck="false"></textarea>
+              </label>
+              <label class="span-2">4) 추가 마무리 문구
+                <textarea id="inpPhrasePart4" rows="4" spellcheck="false"></textarea>
+              </label>
+              <label>4) 추가 문구 붙는 확률(%)
+                <input id="inpPhrasePart4Prob" type="number" min="0" max="100" step="1" value="25" />
+              </label>
+            </div>
+          </details>
+        </div>
+
+        <h1>수치 조정</h1>
+
+        <div class="grid">
+          <label>수익률 최소<input id="inpPercentMin" type="text" value="20" /></label>
+          <label>수익률 최대<input id="inpPercentMax" type="text" value="25" /></label>
+          <label>최소 수익금 (만원)<input id="inpProfitMin" type="text" value="300" /></label>
+          <label>최대 수익금 (만원)<input id="inpProfitMax" type="text" value="1000" /></label>
+          <label>코인 텍스트<input id="inpSymbol" type="text" value="DOGE/USDT" /></label>
+          <label>
+            포지션(LONG/SHORT)
+            <div class="side-toggle" role="group" aria-label="포지션 선택">
+              <button id="btnSideLong" class="secondary side-btn" type="button">LONG</button>
+              <button id="btnSideShort" class="secondary side-btn" type="button">SHORT</button>
+              <input id="inpSide" type="hidden" value="" />
+            </div>
+          </label>
+          <label>진입가격 / 실제진입가(자동)
+            <div class="dual-input">
+              <input id="inpEntry" type="text" value="0.11445" />
+              <input id="inpEntryReal" type="text" value="0.11445" disabled />
+            </div>
+          </label>
+          <label>종료가격(자동)<input id="inpExit" type="text" value="0.00000" disabled /></label>
+          <label>레버리지<input id="inpLeverage" type="text" value="100x" /></label>
+          <label>배경 확대/축소 (0.50~2.00, 1.00=기본)
+            <input id="inpBgZoom" type="number" step="0.001" min="0.5" max="2" value="1.000" />
+            <div class="zoom-stepper">
+              <button id="btnZoomOut" class="secondary" type="button">축소 -0.1%</button>
+              <button id="btnZoomIn" class="secondary" type="button">확대 +0.1%</button>
+            </div>
+          </label>
+
+          <div class="bg-move span-2">
+            <div class="bg-move-row"><button id="btnShiftUp" class="secondary" type="button">위 1px</button></div>
+            <div class="bg-move-row">
+              <button id="btnShiftLeft" class="secondary" type="button">왼쪽 1px</button>
+              <button id="btnShiftReset" class="secondary" type="button">원점</button>
+              <button id="btnShiftRight" class="secondary" type="button">오른쪽 1px</button>
+            </div>
+            <div class="bg-move-row"><button id="btnShiftDown" class="secondary" type="button">아래 1px</button></div>
+            <div class="bg-shift-inputs">
+              <label class="mini">배경 X<input id="inpBgShiftX" type="number" step="1" value="0" /></label>
+              <label class="mini">배경 Y<input id="inpBgShiftY" type="number" step="1" value="28" /></label>
+            </div>
+          </div>
+
+          <label>생성 개수<input id="inpCount" type="number" min="1" step="1" value="1" /></label>
+          <label>파일명 접두사<input id="inpPrefix" type="text" value="screenshot" /></label>
+        </div>
+
+        <div class="actions">
+          <button id="btnDownloadZip" class="primary" type="button">ZIP로 대량 생성</button>
+          <button id="btnReroll" class="secondary" type="button">랜덤 갱신</button>
+          <button id="btnReset" class="secondary" type="button">기본값</button>
+        </div>
+
+        <div class="cloud-actions">
+          <button id="btnCloudLoad" class="secondary" type="button">클라우드 불러오기</button>
+          <button id="btnCloudSave" class="secondary" type="button">클라우드 저장</button>
+        </div>
+      </div>
+
+      <div class="sidepanel">
+        <div class="copied-preview-wrap">
+          <div class="copied-preview-title">크롭 복사 이미지 미리보기</div>
+          <img id="croppedPreviewImg" class="copied-preview-img" alt="cropped preview" />
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+    <div id="centerTip" class="center-tip" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
