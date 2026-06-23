@@ -649,23 +649,23 @@
 
     // 텍스트 실제 글자 기준(폭 100% 요소 제외)
     const percentRect =
-      getRectForSelectors([".dr2-value .plus-sign", "#txtPercent", ".dr2-value .percent-sign"]) || {
-        x: 0,
-        y: 0,
-        w: 1,
-        h: 1,
-      };
-    const profitRect = getRectForSelectors([".dr3-value .plus-sign", "#txtProfit"]) || percentRect;
+      getRectForSelectors([".dr2-value .plus-sign", "#txtPercent", ".dr2-value .percent-sign"]) ||
+      getRectForSelector(".dr2-value") ||
+      { x: 0, y: 0, w: 1, h: 1 };
+    const profitRect = getRectForSelectors([".dr3-value .plus-sign", "#txtProfit"]) || getRectForSelector(".dr3-value") || percentRect;
     const exitRect = getRectForSelector("#txtExit") || profitRect;
 
-    // 시작점: 퍼센트 왼쪽 위 기준으로 랜덤
+    // "무조건 포함" 영역(수익퍼센트 + 수익금액)
+    const requiredRect = rectUnion(percentRect, profitRect);
+
+    // 시작점: 퍼센트 왼쪽 위 기준으로 랜덤 (단, requiredRect를 포함하기 쉬운 범위로 제한)
     const startPadX = randInt(0, 28);
     const startPadY = randInt(0, 18);
     let x = Math.max(0, Math.floor(percentRect.x - startPadX));
     let y = Math.max(0, Math.floor(percentRect.y - startPadY));
 
     // 가로: 60~100% 랜덤, 단 텍스트(퍼센트+수익금)는 절대 잘리면 안 됨
-    const requiredRight = Math.ceil(Math.max(percentRect.x + percentRect.w, profitRect.x + profitRect.w));
+    const requiredRight = Math.ceil(requiredRect.x + requiredRect.w);
     let w = Math.round(randFloat(0.6, 1.0) * W);
     w = Math.max(1, Math.min(W - x, w));
     if (x + w < requiredRight) w = Math.min(W - x, requiredRight - x);
@@ -677,7 +677,14 @@
     const maxH = Math.ceil(exitRect.y + exitRect.h + padBottom) - y;
     const lo = Math.max(1, Math.min(H - y, Math.min(minH, maxH)));
     const hi = Math.max(lo, Math.min(H - y, Math.max(minH, maxH)));
-    const h = randInt(lo, hi);
+    let h = randInt(lo, hi);
+
+    // 최종 안전장치: requiredRect(퍼센트+수익금)가 항상 들어오도록 보정
+    // (드물게 폰트/레이아웃 타이밍으로 rect가 흔들려도 캡쳐가 배경만 뜨는 것을 방지)
+    if (x > requiredRect.x) x = Math.max(0, Math.floor(requiredRect.x));
+    if (y > requiredRect.y) y = Math.max(0, Math.floor(requiredRect.y));
+    if (x + w < requiredRect.x + requiredRect.w) w = Math.min(W - x, Math.ceil(requiredRect.x + requiredRect.w - x));
+    if (y + h < requiredRect.y + requiredRect.h) h = Math.min(H - y, Math.ceil(requiredRect.y + requiredRect.h - y));
 
     // 안전: 필수 요소가 잘리지 않도록 최종 보정
     const requiredBottom = Math.ceil(profitRect.y + profitRect.h);
