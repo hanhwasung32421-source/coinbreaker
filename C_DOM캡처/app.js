@@ -595,9 +595,8 @@
     });
   }
 
-  function getTargetBoxes() {
+  function getBoxes(selectors) {
     const rootRect = els.cardRoot.getBoundingClientRect();
-    const selectors = [".dr2-value", ".dr3-value", ".drp-label", ".drp-value"];
     return selectors.flatMap((sel) =>
       Array.from(els.cardRoot.querySelectorAll(sel)).map((el) => {
         const r = el.getBoundingClientRect();
@@ -614,10 +613,22 @@
   function computeCropRect() {
     const W = els.cardRoot.clientWidth;
     const H = els.cardRoot.clientHeight;
-    const boxes = getTargetBoxes();
+    // 5% 확률로 전체 화면(카드 전체) 크롭
+    if (Math.random() < 0.05) return { x: 0, y: 0, w: W, h: H };
+
+    // 항상 포함되어야 하는 핵심 요소:
+    // - 수익 퍼센트(+19.75%)
+    // - 수익 금액(+10,229,614 WON)
+    // - 코인 첫 줄(DOGE/USDT + LONG/SHORT) : SHORT이 잘리는 문제 방지
+    const required = getBoxes([".dr2-value", ".dr3-value", ".dgbc-r-prices:first-child .drp-value"]);
+    const all = getBoxes([".dr2-value", ".dr3-value", ".drp-label", ".drp-value"]);
+
+    const boxes = required.length ? required : all;
     if (!boxes.length) return { x: 0, y: 0, w: W, h: H };
+
+    // 가끔은 더 넓게(전체 데이터 포함) 잡기
     const mode = Math.random();
-    const wanted = mode < 0.15 ? boxes : boxes.slice(0, 2);
+    const wanted = mode < 0.20 ? all : boxes;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     wanted.forEach((b) => {
       minX = Math.min(minX, b.x);
@@ -643,9 +654,11 @@
     const xMax = Math.min(Math.floor(boundMinX), W - targetW); // 왼쪽이 boundMinX보다 왼쪽(또는 같음)
     const x = xMin <= xMax ? randInt(xMin, xMax) : Math.max(0, Math.min(W - targetW, boundMinX));
 
-    // 세로는 기존 방식(패딩 기반) 유지
-    const y = Math.max(0, Math.floor(minY - padT));
-    const h = Math.min(H - y, Math.ceil(maxY - minY + padT + padB));
+    // 세로는 패딩 기반이지만, required(상단) 영역이 반드시 포함되도록 보정
+    const boundMinY = Math.max(0, Math.floor(minY - padT));
+    const boundMaxY = Math.min(H, Math.ceil(maxY + padB));
+    const y = Math.max(0, Math.min(boundMinY, H - 1));
+    const h = Math.min(H - y, Math.max(1, boundMaxY - y));
     return { x, y, w: targetW, h: Math.max(1, h) };
   }
 
