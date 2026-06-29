@@ -15,18 +15,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Update version.json
+      - name: Update version.json and source files
         run: |
-          BUILD="$(TZ=Asia/Seoul date +'%y%m%d%H%M%S')"
+          DATE_KST="$(TZ=Asia/Seoul date +'%y%m%d')"
+          SINCE_KST="$(TZ=Asia/Seoul date +'%Y-%m-%d 00:00:00 +0900')"
+          COUNT=$(git log --since="$SINCE_KST" --grep="chore: bump build version" --invert-grep --oneline | wc -l)
+          SEQ=$(printf "%02d" $COUNT)
+          BUILD="a${DATE_KST}${SEQ}"
+          echo "Computed version: $BUILD"
+          
           echo "{\"build\":\"$BUILD\"}" > "version.json"
+          sed -i "s/const BUILD_VERSION = \"[^\"]*\";/const BUILD_VERSION = \"$BUILD\";/g" app.js
+          sed -i "s/<span id=\"buildVersion\">[^<]*<\/span>/<span id=\"buildVersion\">$BUILD<\/span>/g" index.html
+          sed -i "s/src=\"\.\/app\.js?v=[^\"]*\"/src=\".\/app.js?v=$BUILD\"/g" index.html
+          
           cat "version.json"
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "version.json"
+          git add version.json app.js index.html
           git commit -m "chore: bump build version" || exit 0
           git push
